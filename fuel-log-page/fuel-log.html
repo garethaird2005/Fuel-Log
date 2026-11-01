@@ -1,0 +1,813 @@
+<title>Fuel Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column like a watch screen grown up: sticky date bar, energy gauge, food and training logs, a 7-day strip, and a thumb bar pinned to the bottom. */
+:root {
+  --bg: #EDF1F4;
+  --surface: #FFFFFF;
+  --ink: #13202B;
+  --muted: #5A6976;
+  --line: #D6DEE5;
+  --fuel: #B35A0A;
+  --fuel-soft: #F6E3CF;
+  --burn: #1F6FC5;
+  --burn-soft: #D9E8F8;
+  --over: #C2362B;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
+    --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
+  --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 16px/1.45 var(--font-body);
+  -webkit-text-size-adjust: 100%;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.col { max-width: 592px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
+h2 { font-size: 1.35rem; letter-spacing: .01em; }
+h3 { font-size: 1.05rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--burn); outline-offset: 2px; border-radius: 6px; }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+
+/* Date bar */
+.datebar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 10px;
+}
+.datebar .col { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.navbtn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); font-size: 1.4rem; line-height: 1;
+}
+.navbtn:disabled { opacity: .35; cursor: default; }
+.date { text-align: center; border: 0; background: none; padding: 0; }
+.date strong { display: block; font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.1; }
+.date span { color: var(--muted); font-size: .85rem; }
+
+main { padding-block: 4px calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+
+.banner {
+  margin: 0; padding: 10px 14px; border-radius: 10px; font-size: .9rem;
+  background: var(--fuel-soft); color: var(--ink);
+}
+
+/* Gauge */
+.gauge { background: var(--surface); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
+.big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.big .num { font-size: 3.6rem; font-weight: 700; line-height: .9; letter-spacing: -.01em; }
+.big .unit { font-size: 1rem; color: var(--muted); }
+.big.is-over .num { color: var(--over); }
+.track { position: relative; height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
+.track span { position: absolute; top: 0; bottom: 0; transition: width .35s ease, left .35s ease; }
+.track .earned {
+  background: repeating-linear-gradient(135deg, var(--burn-soft) 0 6px, var(--burn) 6px 8px);
+  opacity: .9;
+}
+.track .eaten { left: 0; background: var(--fuel); border-radius: 7px 0 0 7px; }
+.track .over { background: var(--over); }
+.stats, .macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.stats div, .macros div { min-width: 0; }
+.stats dt, .macros dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stats .fuel { color: var(--fuel); }
+.stats .burn { color: var(--burn); }
+.macros { border-top: 1px solid var(--line); padding-top: 12px; }
+.macros dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.macros dd small { color: var(--muted); font-weight: 400; }
+
+/* Logs */
+.log { background: var(--surface); border-radius: var(--radius); padding: 14px 16px 6px; }
+.log-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 6px; }
+.log-head .sum { font-family: var(--font-display); font-size: 1.15rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.entries { list-style: none; margin: 0; padding: 0; }
+.entries li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.entries li:first-child { border-top: 0; }
+.what { flex: 1; min-width: 0; display: grid; }
+.what .name { overflow-wrap: anywhere; }
+.what .sub { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+.kcal { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.del {
+  width: 32px; height: 32px; flex: none; border-radius: 50%; border: 0;
+  background: transparent; color: var(--muted); font-size: .95rem;
+}
+.del:hover { background: var(--bg); }
+.empty { color: var(--muted); font-size: .92rem; padding: 6px 0 12px; margin: 0; }
+.garmin { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 10px 0; }
+.garmin .status { flex: 1 1 200px; min-width: 0; }
+.garmin-actions { display: flex; gap: 8px; }
+.btn.small { min-height: 36px; padding: 0 12px; font-size: .9rem; }
+.tag { color: var(--burn); font-weight: 600; }
+
+/* Week strip */
+.week-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.week-head p { margin: 0; color: var(--muted); font-size: .85rem; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.wk { border: 0; background: none; padding: 4px 0; display: grid; justify-items: center; gap: 4px; border-radius: 10px; min-width: 0; }
+.wk.is-current { background: var(--surface); }
+.wk-plot { position: relative; width: 60%; max-width: 30px; height: 84px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.wk-bar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--fuel); }
+.wk-bar.over { background: var(--over); }
+.wk-target { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--ink); opacity: .55; }
+.wk-num { font-family: var(--font-display); font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+.wk-day { font-size: .75rem; font-weight: 600; }
+
+/* Thumb bar */
+.thumbbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+.thumbbar .col { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+.pill {
+  min-height: 48px; border-radius: 12px; border: 1px solid transparent; padding: 0 14px;
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; letter-spacing: .02em;
+}
+.pill.food { background: var(--fuel-soft); border-color: var(--fuel); }
+.pill.train { background: var(--burn-soft); border-color: var(--burn); }
+.pill.plain { background: transparent; border-color: var(--line); font-family: var(--font-body); font-size: .95rem; font-weight: 500; }
+
+/* Sheets */
+dialog.sheet {
+  border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 592px;
+  max-height: calc(100% - 40px - env(safe-area-inset-top, 0px));
+  border-radius: 18px 18px 0 0; background: var(--surface); color: var(--ink);
+}
+dialog.sheet::backdrop { background: rgb(5 10 15 / .55); }
+.sheet-body {
+  display: grid; gap: 14px;
+  padding-top: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+input, textarea {
+  width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg);
+  border-radius: 10px; padding: 10px 12px; font-size: 1rem; color: var(--ink);
+}
+textarea { resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > * { flex: 1 1 auto; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.btn {
+  min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
+  padding: 0 16px; font-weight: 600;
+}
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+.status { margin: 0; font-size: .88rem; color: var(--muted); min-height: 1.2em; }
+.hint { margin: 0; font-size: .85rem; color: var(--muted); }
+.check { display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: .95rem; }
+.check input { width: 22px; height: 22px; flex: none; }
+.kcal-edit { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.kcal-edit input { width: 5.2em; padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 12px;
+  font-size: .9rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip b { font-weight: 600; color: var(--fuel); margin-left: 4px; }
+details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+details[open] summary { margin-bottom: 10px; }
+.divider { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+/* Toast */
+.toast {
+  position: fixed; z-index: 20; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  max-width: 560px; margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--ink); color: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: .95rem;
+}
+.toast button { border: 0; background: none; color: var(--surface); font-weight: 700; text-decoration: underline; padding: 4px; }
+
+@media (prefers-reduced-motion: reduce) { .track span { transition: none; } }
+</style>
+
+<header class="datebar gutter">
+  <div class="col">
+    <button id="prevDay" class="navbtn" aria-label="Previous day">‹</button>
+    <button id="dayLabel" class="date" aria-label="Go to today"><strong id="dayName">Today</strong><span id="dayDate"></span></button>
+    <button id="nextDay" class="navbtn" aria-label="Next day">›</button>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="col" style="display:grid;gap:14px">
+    <p id="banner" class="banner" role="status" hidden></p>
+
+    <section class="gauge" aria-label="Energy balance">
+      <div class="big" id="big"><span class="num" id="left">0</span><span class="unit" id="leftLabel">kcal left</span></div>
+      <div class="track" aria-hidden="true"><span class="earned" id="barEarned"></span><span class="eaten" id="barEaten"></span><span class="over" id="barOver"></span></div>
+      <dl class="stats">
+        <div><dt>Target</dt><dd id="sTarget">0</dd></div>
+        <div><dt>Eaten</dt><dd id="sEaten" class="fuel">0</dd></div>
+        <div><dt>Training</dt><dd id="sBurned" class="burn">0</dd></div>
+      </dl>
+      <dl class="macros">
+        <div><dt>Protein</dt><dd id="mP">0 <small>g</small></dd></div>
+        <div><dt>Carbs</dt><dd id="mC">0 <small>g</small></dd></div>
+        <div><dt>Fat</dt><dd id="mF">0 <small>g</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="log" aria-labelledby="foodHead">
+      <div class="log-head"><h2 id="foodHead">Food</h2><span class="sum" id="foodSum"></span></div>
+      <ul class="entries" id="foodList"></ul>
+    </section>
+
+    <section class="log" aria-labelledby="trainHead">
+      <div class="log-head"><h2 id="trainHead">Training</h2><span class="sum" id="trainSum"></span></div>
+      <ul class="entries" id="trainList"></ul>
+      <div class="garmin" id="garminRow" hidden>
+        <p class="status" id="garminStatus" role="status"></p>
+        <div class="garmin-actions">
+          <button class="btn small" id="garminAction" type="button" hidden></button>
+          <button class="btn small" id="syncBtn" type="button">Sync Garmin</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="weekHead">
+      <div class="week-head"><h3 id="weekHead">Last 7 days</h3><p id="weekAvg"></p></div>
+      <div class="week" id="week"></div>
+    </section>
+  </div>
+</main>
+
+<nav class="thumbbar gutter" aria-label="Add entries">
+  <div class="col">
+    <button class="pill food" data-open="foodSheet">+ Food</button>
+    <button class="pill train" data-open="trainSheet">+ Training</button>
+    <button class="pill plain" data-open="setSheet">Target</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden><span id="toastMsg"></span><button id="toastUndo" type="button" hidden>Undo</button></div>
+
+<dialog class="sheet" id="foodSheet" aria-labelledby="foodSheetTitle">
+  <div class="sheet-body">
+    <div class="sheet-head"><h2 id="foodSheetTitle">Add food</h2><button class="del" data-close aria-label="Close">✕</button></div>
+
+    <div id="estimateBlock" style="display:grid;gap:10px">
+      <label for="describe">Describe what you ate
+        <textarea id="describe" rows="2" placeholder="2 scrambled eggs, 2 slices of toast with butter, a flat white"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn primary" id="estimateBtn" type="button">Estimate calories</button>
+        <button class="btn" id="photoBtn" type="button" hidden>Use a photo</button>
+        <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+      <p class="status" id="estStatus" role="status"></p>
+      <ul class="entries" id="estList"></ul>
+      <button class="btn primary" id="addEstBtn" type="button" hidden>Add</button>
+    </div>
+
+    <div id="recentBlock" hidden style="display:grid;gap:8px">
+      <h3>Recent</h3>
+      <div class="chips" id="recent"></div>
+    </div>
+
+    <hr class="divider">
+    <details id="manual">
+      <summary>Enter it yourself</summary>
+      <form id="manualForm" style="display:grid;gap:10px">
+        <label for="mName">Food<input id="mName" required autocomplete="off" placeholder="Chicken salad"></label>
+        <div class="grid4">
+          <label for="mKcal">kcal<input id="mKcal" type="number" inputmode="numeric" min="0" required></label>
+          <label for="mProt">Protein g<input id="mProt" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label for="mCarb">Carbs g<input id="mCarb" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label for="mFat">Fat g<input id="mFat" type="number" inputmode="decimal" min="0" step="any"></label>
+        </div>
+        <button class="btn primary" type="submit">Add food</button>
+      </form>
+    </details>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="trainSheet" aria-labelledby="trainSheetTitle">
+  <form class="sheet-body" id="trainForm">
+    <div class="sheet-head"><h2 id="trainSheetTitle">Add training</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
+    <label for="wName">Activity<input id="wName" list="workTypes" required autocomplete="off" placeholder="Run"></label>
+    <datalist id="workTypes"><option value="Run"></option><option value="Strength"></option><option value="Cycle"></option><option value="Walk"></option><option value="Swim"></option><option value="HIIT"></option><option value="Yoga"></option></datalist>
+    <div class="grid2">
+      <label for="wMin">Minutes<input id="wMin" type="number" inputmode="numeric" min="0"></label>
+      <label for="wKcal">Calories burned<input id="wKcal" type="number" inputmode="numeric" min="0" required></label>
+    </div>
+    <label for="wNotes">Notes<input id="wNotes" autocomplete="off" placeholder="5 x 5 squat at 80 kg"></label>
+    <p class="hint">Garmin workouts arrive by themselves when you tap Sync Garmin. For anything else, enter the calories here.</p>
+    <button class="btn primary" type="submit">Add training</button>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="setSheet" aria-labelledby="setSheetTitle">
+  <form class="sheet-body" id="setForm">
+    <div class="sheet-head"><h2 id="setSheetTitle">Daily target</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
+    <label for="target">Calories per day<input id="target" type="number" inputmode="numeric" min="800" max="6000" required></label>
+    <label class="check" for="addBack"><input id="addBack" type="checkbox"> Add training calories to my target</label>
+    <p class="hint">Garmin workouts count their active calories, so your resting burn isn't counted twice. Your log saves to your Claude account and only you can see it.</p>
+    <button class="btn primary" type="submit">Save target</button>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const nf = new Intl.NumberFormat();
+  const fmt = (n) => nf.format(Math.round(n || 0));
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const z = (n) => String(n).padStart(2, "0");
+  const keyOf = (d) => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+  const fromKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+  const shift = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+  const newId = () => Math.random().toString(36).slice(2, 10);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const today = () => keyOf(new Date());
+  const WINDOW = 120;
+
+  const S = {
+    mode: "loading",          // loading | live | local | private
+    slow: false, dbError: null,
+    db: null, daysCol: null, meta: null, sample: null,
+    settings: { target: 2200, addBack: true },
+    days: new Map(),          // from the live subscription (newest WINDOW days)
+    extra: new Map(),         // older days fetched on demand, plus this view's own writes
+    current: today(),
+    est: [],
+  };
+
+  // ---------- reading ----------
+  const dayView = (k) => S.days.get(k) || S.extra.get(k) || { date: k, food: [], workouts: [] };
+  const getDay = (k) => {
+    const d = JSON.parse(JSON.stringify(dayView(k)));
+    d.date = k; d.food = Array.isArray(d.food) ? d.food : []; d.workouts = Array.isArray(d.workouts) ? d.workouts : [];
+    return d;
+  };
+  const sum = (arr, f) => (Array.isArray(arr) ? arr : []).reduce((t, x) => t + num(x && x[f]), 0);
+  function totals(k) {
+    const d = dayView(k);
+    const eaten = sum(d.food, "kcal"), burned = sum(d.workouts, "kcal");
+    const target = num(S.settings.target) || 2200;
+    const budget = target + (S.settings.addBack ? burned : 0);
+    return { eaten, burned, target, budget, left: budget - eaten, p: sum(d.food, "p"), c: sum(d.food, "c"), f: sum(d.food, "f"), food: d.food || [], workouts: d.workouts || [] };
+  }
+
+  // ---------- writing ----------
+  let chain = Promise.resolve();
+  function queue(write, failMsg) {
+    chain = chain.then(write).catch((err) => {
+      if (err && err.code === "invalid_argument") { S.mode = "private"; render(); return; }
+      toast(err && err.code === "quota_exceeded" ? "Your log is full. Remove some old entries to add more." : failMsg);
+    });
+  }
+  function saveDay(k, day) {
+    S.extra.set(k, day);
+    if (S.days.has(k) || S.mode !== "live") S.days.set(k, day);
+    render();
+    if (S.mode === "live") queue(() => S.daysCol.doc(k).set(day), "Couldn't save that change. Check your connection and try again.");
+  }
+  function addFood(items) {
+    const d = getDay(S.current);
+    const before = getDay(S.current);
+    for (const it of items) d.food.push({ id: newId(), name: it.name, portion: it.portion || "", kcal: Math.round(num(it.kcal)), p: Math.round(num(it.p)), c: Math.round(num(it.c)), f: Math.round(num(it.f)), at: Date.now() });
+    saveDay(S.current, d);
+    const k = S.current;
+    toast(items.length === 1 ? `Added ${items[0].name}` : `Added ${items.length} items`, () => saveDay(k, before));
+  }
+
+  // ---------- rendering ----------
+  function dayWords(k) {
+    const t = today();
+    const name = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : fromKey(k).toLocaleDateString(undefined, { weekday: "long" });
+    const date = fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: fromKey(k).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+    return { name, date };
+  }
+
+  function render() {
+    const k = S.current, w = dayWords(k);
+    $("dayName").textContent = w.name;
+    $("dayDate").textContent = w.date;
+    $("nextDay").disabled = k >= today();
+
+    const t = totals(k);
+    const over = t.left < 0;
+    $("left").textContent = fmt(Math.abs(t.left));
+    $("leftLabel").textContent = over ? "kcal over target" : "kcal left";
+    $("big").classList.toggle("is-over", over);
+    $("sTarget").textContent = fmt(t.budget);
+    $("sEaten").textContent = fmt(t.eaten);
+    $("sBurned").textContent = fmt(t.burned);
+    $("mP").innerHTML = `${fmt(t.p)} <small>g</small>`;
+    $("mC").innerHTML = `${fmt(t.c)} <small>g</small>`;
+    $("mF").innerHTML = `${fmt(t.f)} <small>g</small>`;
+
+    const scale = Math.max(t.budget, t.eaten, 1);
+    const pct = (v) => `${Math.max(0, v) / scale * 100}%`;
+    Object.assign($("barEarned").style, { left: pct(t.target), width: pct(t.budget - t.target) });
+    Object.assign($("barEaten").style, { width: pct(Math.min(t.eaten, t.budget)) });
+    Object.assign($("barOver").style, { left: pct(t.budget), width: pct(t.eaten - t.budget) });
+
+    $("foodSum").textContent = t.food.length ? `${fmt(t.eaten)} kcal` : "";
+    $("foodList").innerHTML = t.food.length ? t.food.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${[x.portion, (x.p || x.c || x.f) ? `P ${fmt(x.p)} · C ${fmt(x.c)} · F ${fmt(x.f)}` : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
+      <span class="kcal">${fmt(x.kcal)}</span><button class="del" data-del="food" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("")
+      : `<li><p class="empty">Nothing logged for this day. Tap + Food and describe what you ate.</p></li>`;
+
+    $("trainSum").textContent = t.workouts.length ? `${fmt(t.burned)} kcal` : "";
+    $("trainList").innerHTML = t.workouts.length ? t.workouts.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${[x.minutes ? `${fmt(x.minutes)} min` : "", x.notes || ""].filter(Boolean).map(esc).join(" · ")}${x.source === "garmin" ? `${x.minutes || x.notes ? " · " : ""}<span class="tag">Garmin</span>` : ""}</span></div>
+      <span class="kcal">${fmt(x.kcal)}</span><button class="del" data-del="workouts" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("")
+      : `<li><p class="empty">${S.mcp ? "No training logged. Tap Sync Garmin to pull in your workouts, or + Training to add one." : "No training logged. Tap + Training to add a workout."}</p></li>`;
+
+    renderWeek();
+    renderBanner();
+  }
+
+  function renderWeek() {
+    const keys = Array.from({ length: 7 }, (_, i) => shift(S.current, i - 6));
+    const data = keys.map((k) => ({ k, ...totals(k) }));
+    const max = Math.max(1, ...data.map((d) => Math.max(d.eaten, d.budget)));
+    $("week").innerHTML = data.map((d) => {
+      const label = fromKey(d.k).toLocaleDateString(undefined, { weekday: "narrow" });
+      const long = fromKey(d.k).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+      return `<button class="wk${d.k === S.current ? " is-current" : ""}" data-goto="${d.k}" aria-label="${esc(long)}: ate ${fmt(d.eaten)} of ${fmt(d.budget)} kcal">
+        <span class="wk-plot"><span class="wk-bar${d.eaten > d.budget ? " over" : ""}" style="height:${d.eaten / max * 100}%"></span><span class="wk-target" style="bottom:calc(${d.budget / max * 100}% - 1px)"></span></span>
+        <span class="wk-num">${d.eaten ? fmt(d.eaten) : "–"}</span><span class="wk-day">${esc(label)}</span></button>`;
+    }).join("");
+    const logged = data.filter((d) => d.eaten > 0);
+    $("weekAvg").textContent = logged.length ? `Average ${fmt(sum(logged, "eaten") / logged.length)} kcal eaten on ${logged.length} logged day${logged.length === 1 ? "" : "s"}` : "Bars show calories eaten; the line is your target.";
+  }
+
+  function renderBanner() {
+    const msg =
+      S.mode === "local" ? "This is a preview. Open Fuel Log from your Claude account to save what you log." :
+      S.mode === "private" ? "This log is private to its owner, so nothing you add here is saved." :
+      S.dbError ? "Lost the connection to your saved log. Reload the page to reconnect." :
+      S.slow ? "Can't reach your saved log yet. Entries may not save until the connection is back." : "";
+    $("banner").textContent = msg;
+    $("banner").hidden = !msg;
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null, undoFn = null;
+  function toast(msg, undo) {
+    $("toastMsg").textContent = msg;
+    undoFn = undo || null;
+    $("toastUndo").hidden = !undo;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; undoFn = null; }, 5000);
+  }
+  $("toastUndo").addEventListener("click", () => { const f = undoFn; undoFn = null; $("toast").hidden = true; if (f) f(); });
+
+  // ---------- navigation ----------
+  function goTo(k) {
+    if (k > today()) k = today();
+    S.current = k; render(); ensureDay(k);
+    if (G.ready && !G.synced.has(k)) syncGarmin(rangeFor(k), false);
+  }
+  $("prevDay").addEventListener("click", () => goTo(shift(S.current, -1)));
+  $("nextDay").addEventListener("click", () => goTo(shift(S.current, 1)));
+  $("dayLabel").addEventListener("click", () => goTo(today()));
+  $("week").addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (b) goTo(b.dataset.goto); });
+
+  async function ensureDay(k) {
+    if (S.mode !== "live" || S.days.has(k) || S.extra.has(k) || S.days.size < WINDOW) return;
+    const oldest = [...S.days.keys()].sort()[0];
+    if (oldest && k >= oldest) return;
+    try { const s = await S.daysCol.doc(k).get(); if (s.exists) { S.extra.set(k, s.data()); render(); } } catch (_) { /* shown as empty */ }
+  }
+
+  // ---------- delete with undo ----------
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del]");
+    if (!b) return;
+    const k = S.current, before = getDay(k), after = getDay(k), list = b.dataset.del;
+    const item = after[list].find((x) => x.id === b.dataset.id);
+    after[list] = after[list].filter((x) => x.id !== b.dataset.id);
+    if (item && item.source === "garmin") after.dismissed = (Array.isArray(after.dismissed) ? after.dismissed : []).concat(item.id);
+    saveDay(k, after);
+    toast(`Removed ${item ? item.name : "entry"}`, () => saveDay(k, before));
+  });
+
+  // ---------- sheets ----------
+  function openSheet(id) {
+    if (id === "setSheet") { $("target").value = S.settings.target; $("addBack").checked = !!S.settings.addBack; }
+    if (id === "foodSheet") renderRecent();
+    $(id).showModal();
+  }
+  document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openSheet(b.dataset.open)));
+  document.querySelectorAll("dialog.sheet").forEach((d) => {
+    d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
+    d.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => d.close()));
+  });
+
+  // Recent foods: tap to log again
+  let recentItems = [];
+  function renderRecent() {
+    const seen = new Set(); recentItems = [];
+    const keys = [...new Set([...S.days.keys(), ...S.extra.keys()])].sort().reverse();
+    for (const k of keys) {
+      const food = (dayView(k).food || []).slice().reverse();
+      for (const x of food) {
+        const key = String(x.name || "").trim().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key); recentItems.push(x);
+        if (recentItems.length >= 12) break;
+      }
+      if (recentItems.length >= 12) break;
+    }
+    $("recentBlock").hidden = !recentItems.length;
+    $("recent").innerHTML = recentItems.map((x, i) => `<button class="chip" type="button" data-recent="${i}" aria-label="Add ${esc(x.name)}, ${fmt(x.kcal)} kcal">${esc(x.name)}<b>${fmt(x.kcal)}</b></button>`).join("");
+  }
+  $("recent").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-recent]"); if (!b) return;
+    const x = recentItems[Number(b.dataset.recent)]; if (!x) return;
+    addFood([x]); $("foodSheet").close();
+  });
+
+  // Manual food
+  $("manualForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("mName").value.trim(); if (!name) return;
+    addFood([{ name, kcal: $("mKcal").value, p: $("mProt").value, c: $("mCarb").value, f: $("mFat").value }]);
+    e.target.reset(); $("foodSheet").close();
+  });
+
+  // Training
+  $("trainForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("wName").value.trim(); if (!name) return;
+    const k = S.current, before = getDay(k), d = getDay(k);
+    d.workouts.push({ id: newId(), name, minutes: Math.round(num($("wMin").value)), kcal: Math.round(num($("wKcal").value)), notes: $("wNotes").value.trim(), at: Date.now() });
+    saveDay(k, d);
+    toast(`Added ${name}`, () => saveDay(k, before));
+    e.target.reset(); $("trainSheet").close();
+  });
+
+  // Target
+  $("setForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const target = Math.round(num($("target").value));
+    if (target < 800 || target > 6000) { $("target").focus(); return; }
+    const next = { target, addBack: $("addBack").checked };
+    const changed = next.target !== S.settings.target || next.addBack !== S.settings.addBack;
+    S.settings = next; render(); $("setSheet").close();
+    if (changed && S.mode === "live") queue(() => S.meta.set(next), "Couldn't save your target. Check your connection and try again.");
+  });
+
+  // ---------- estimates from Claude ----------
+  let estCtl = null;
+  const PERMANENT = ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"];
+  function estCopy(code) {
+    if (PERMANENT.includes(code)) return "Estimates need your OK to use Claude. Reload to be asked again, or enter the food yourself below.";
+    if (code === "rate_limited") return "Too many estimates in a short time. Wait a minute and try again.";
+    if (code === "image_rejected") return "That photo couldn't be used. Try a JPEG or PNG under 20 MB.";
+    if (code === "images_unavailable") return "Photos can't be sent from here. Describe the meal instead.";
+    if (code === "session_expired") return "Your Claude sign-in has expired. Sign in again, then retry.";
+    if (["invalid_json", "empty_completion", "refused"].includes(code)) return "Couldn't estimate that. Try describing it a little differently.";
+    return "The estimate didn't finish. Check your connection and try again.";
+  }
+  function setEstBusy(busy) {
+    $("estimateBtn").disabled = busy; $("photoBtn").disabled = busy;
+    $("estimateBtn").textContent = busy ? "Estimating…" : "Estimate calories";
+  }
+  function renderEst() {
+    $("estList").innerHTML = S.est.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${esc([x.portion, `P ${x.p} · C ${x.c} · F ${x.f}`].filter(Boolean).join(" · "))}</span></div>
+      <label class="kcal-edit" for="est-${x.id}"><input id="est-${x.id}" type="number" inputmode="numeric" min="0" value="${x.kcal}" data-est-kcal="${x.id}" aria-label="Calories for ${esc(x.name)}">kcal</label>
+      <button class="del" type="button" data-est-del="${x.id}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("");
+    updateEstButton();
+  }
+  function updateEstButton() {
+    const total = S.est.reduce((t, x) => t + num(x.kcal), 0);
+    $("addEstBtn").hidden = !S.est.length;
+    $("addEstBtn").textContent = S.est.length === 1 ? `Add · ${fmt(total)} kcal` : `Add ${S.est.length} items · ${fmt(total)} kcal`;
+  }
+  $("estList").addEventListener("input", (e) => {
+    const id = e.target.dataset.estKcal; if (!id) return;
+    const x = S.est.find((i) => i.id === id); if (x) { x.kcal = Math.max(0, Math.round(num(e.target.value))); updateEstButton(); }
+  });
+  $("estList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-est-del]"); if (!b) return;
+    S.est = S.est.filter((x) => x.id !== b.dataset.estDel); renderEst();
+  });
+  $("addEstBtn").addEventListener("click", () => {
+    if (!S.est.length) return;
+    addFood(S.est); S.est = []; renderEst(); $("describe").value = ""; $("estStatus").textContent = ""; $("foodSheet").close();
+  });
+
+  async function runEstimate(images) {
+    if (!S.sample) return;
+    const text = $("describe").value.trim().slice(0, 1500);
+    if (!text && !images) { $("describe").focus(); return; }
+    if (estCtl) estCtl.abort();
+    const ctl = estCtl = new AbortController();
+    setEstBusy(true);
+    $("estStatus").textContent = images ? "Looking at your photo…" : "Working out the calories…";
+    const intro = images
+      ? "The photo shows food or drink someone is having." + (text ? ` They add this note: """${text}"""` : "")
+      : `Someone had this food or drink: """${text}"""`;
+    const prompt = `${intro}
+List each separate food or drink with a realistic portion: use the amount they state, otherwise a typical single serving. Estimate the energy and macronutrients for that whole portion.
+Reply with only a JSON array, one object per item, numbers rounded to whole numbers, for example:
+[{"name":"Scrambled eggs","portion":"2 large eggs","kcal":180,"protein":13,"carbs":1,"fat":14}]`;
+    try {
+      const out = await S.sample.json(prompt, Object.assign({ modelTier: "quick", signal: ctl.signal }, images ? { images } : {}));
+      const items = (Array.isArray(out) ? out : []).filter((x) => x && typeof x.name === "string" && x.name.trim() && Number.isFinite(Number(x.kcal))).slice(0, 20)
+        .map((x) => ({ id: newId(), name: x.name.trim().slice(0, 80), portion: String(x.portion || "").slice(0, 60), kcal: Math.max(0, Math.round(num(x.kcal))), p: Math.max(0, Math.round(num(x.protein))), c: Math.max(0, Math.round(num(x.carbs))), f: Math.max(0, Math.round(num(x.fat))) }));
+      S.est = items; renderEst();
+      $("estStatus").textContent = items.length ? "These are estimates. Adjust any number, then add." : "Couldn't pick out any food. Try describing it differently.";
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "cancelled") { $("estStatus").textContent = ""; return; }
+      $("estStatus").textContent = estCopy(code);
+      if (PERMANENT.includes(code)) { S.sampleOff = true; $("manual").open = true; }
+      if (code === "images_unavailable") $("photoBtn").hidden = true;
+    } finally {
+      if (estCtl === ctl) { estCtl = null; setEstBusy(false); }
+      if (S.sampleOff) { $("estimateBtn").disabled = true; $("photoBtn").disabled = true; }
+    }
+  }
+  $("estimateBtn").addEventListener("click", () => runEstimate(null));
+  $("describe").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runEstimate(null); } });
+  $("photoBtn").addEventListener("click", () => $("photoInput").click());
+  $("photoInput").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (file) runEstimate(file);
+  });
+  $("foodSheet").addEventListener("close", () => { if (estCtl) estCtl.abort(); });
+
+  // ---------- Garmin, through the Garmin Sync connector ----------
+  const GARMIN = "Garmin Sync";
+  const G = { ready: false, busy: false, synced: new Set(), action: null, last: 0 };
+  function garminUI(msg, actionLabel, actionFn) {
+    $("garminRow").hidden = false;
+    $("garminStatus").textContent = msg || "";
+    G.action = actionFn || null;
+    $("garminAction").hidden = !actionLabel;
+    $("garminAction").textContent = actionLabel || "";
+  }
+  $("garminAction").addEventListener("click", () => { const f = G.action; if (f) f(); });
+  $("syncBtn").addEventListener("click", () => syncGarmin(rangeFor(S.current), false));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && G.ready && Date.now() - G.last > 10 * 60 * 1000) syncGarmin(rangeFor(S.current), false);
+  });
+
+  function rangeFor(k) {
+    const t = today(), weekStart = shift(t, -6);
+    return k >= weekStart ? [weekStart, t] : [k, k];
+  }
+
+  async function initGarmin() {
+    if (!S.mcp || S.mode !== "live") return;
+    let st = "prompt";
+    try { if (S.perms) st = await S.perms.state("mcp:" + GARMIN); } catch (_) { st = "prompt"; }
+    if (st === "unavailable") return;
+    if (st === "denied") { garminUI("Garmin sync is turned off for this page.", "Turn it on", openPermissions); return; }
+    if (st === "granted") { garminUI(""); syncGarmin(rangeFor(S.current), false); return; }
+    garminUI("Pull in your workouts and their calories from Garmin.");
+  }
+  function openPermissions() {
+    if (!S.perms) return;
+    S.perms.manage().then(initGarmin).catch(() => garminUI("Turn Garmin Sync back on from this page's Permissions menu."));
+  }
+
+  async function syncGarmin(range, isRetry) {
+    if (G.busy || !S.mcp || S.mode !== "live") return;
+    const [start, end] = range;
+    G.busy = true; $("syncBtn").disabled = true; $("syncBtn").textContent = "Syncing…";
+    try {
+      const res = await S.mcp.callTool(GARMIN, "get_activities", { start_date: start, end_date: end });
+      const acts = res && res.payload && Array.isArray(res.payload.activities) ? res.payload.activities : null;
+      if (!acts) throw { code: "bad_payload" };
+      const changed = applyGarmin(start, end, acts);
+      G.ready = true; G.last = Date.now();
+      for (let k = start; k <= end; k = shift(k, 1)) G.synced.add(k);
+      const when = new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      garminUI(`Synced with Garmin at ${when}${changed ? `, ${changed} day${changed === 1 ? "" : "s"} updated` : ""}.`);
+    } catch (e) {
+      garminError(e, range, isRetry);
+    } finally {
+      G.busy = false; $("syncBtn").disabled = false; $("syncBtn").textContent = "Sync Garmin";
+    }
+  }
+
+  function garminError(e, range, isRetry) {
+    const code = e && e.code, where = "claude.ai Settings, Connectors";
+    switch (code) {
+      case "server_not_connected": case "server_not_found":
+        return garminUI(`Garmin isn't connected yet. Add the Garmin Sync connector in ${where}, then tap Sync Garmin.`);
+      case "needs_reauth": return garminUI(`Reconnect Garmin Sync in ${where}, then tap Sync Garmin.`);
+      case "selection_required": return garminUI("You have more than one connector called Garmin Sync. Pick one when Claude asks, then tap Sync Garmin.");
+      case "not_in_manifest": return garminUI("Garmin sync is turned off for this page.", "Turn it on", openPermissions);
+      case "approval_required": return garminUI("Garmin sync needs your OK. Tap Sync Garmin and choose Allow.");
+      case "blocked_by_policy": return garminUI("Your organization doesn't allow this connector here.");
+      case "tool_error": {
+        const r = e.result, t = r && Array.isArray(r.content) && r.content[0] && r.content[0].text;
+        return garminUI(String(t || e.message || "Garmin Sync reported a problem.").slice(0, 240));
+      }
+      case "bad_payload": return garminUI("Garmin Sync answered in a way this page doesn't understand. Ask Claude to check the connector.");
+      case "not_granted": case "capability_disabled": case "capability_removed":
+        $("garminRow").hidden = true; return;
+      case "cancelled": return garminUI("");
+      default:
+        if (e && e.retryable && !isRetry) {
+          garminUI("Garmin didn't answer. Trying once more…");
+          setTimeout(() => syncGarmin(range, true), Math.max(Number(e.retryAfterMs) || 0, 1500 + Math.random() * 2000));
+          return;
+        }
+        return garminUI("Couldn't reach Garmin just now. Try Sync Garmin again in a minute.");
+    }
+  }
+
+  // Replace each day's Garmin workouts with what Garmin reports; manual entries and removed ones stay as they are.
+  function applyGarmin(start, end, acts) {
+    const byDay = new Map();
+    for (const a of acts) {
+      if (!a || !a.date) continue;
+      if (!byDay.has(a.date)) byDay.set(a.date, []);
+      byDay.get(a.date).push(a);
+    }
+    const sig = (list) => list.map((w) => [w.id, w.name, w.minutes, w.kcal, w.notes].join("|")).join("\n");
+    let changed = 0;
+    for (let k = start; k <= end; k = shift(k, 1)) {
+      const day = getDay(k);
+      const dismissed = new Set(Array.isArray(day.dismissed) ? day.dismissed : []);
+      const incoming = (byDay.get(k) || []).map((a) => ({
+        id: "g" + a.id,
+        name: String(a.name || "Workout").slice(0, 80),
+        minutes: Math.round(num(a.duration_min)),
+        kcal: Math.round(num(a.active_calories != null ? a.active_calories : a.calories)),
+        notes: [a.distance_km ? `${a.distance_km} km` : "", a.avg_hr ? `avg HR ${a.avg_hr}` : ""].filter(Boolean).join(" · "),
+        source: "garmin",
+      })).filter((w) => !dismissed.has(w.id));
+      const current = day.workouts.filter((w) => w.source === "garmin");
+      if (sig(current) === sig(incoming)) continue;
+      day.workouts = day.workouts.filter((w) => w.source !== "garmin").concat(incoming);
+      saveDay(k, day);
+      changed++;
+    }
+    return changed;
+  }
+
+  // ---------- start ----------
+  async function start() {
+    render();
+    const use = (n) => (window.claude && typeof window.claude.use === "function") ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+    const [db, sample, mcp, perms] = await Promise.all([use("db"), use("sample"), use("mcp"), use("permissions")]);
+    S.mcp = mcp; S.perms = perms;
+
+    S.sample = sample;
+    if (!sample) { $("estimateBlock").hidden = true; $("manual").open = true; }
+    else sample.limits().then((l) => { $("photoBtn").hidden = !(l && l.images); }).catch(() => {});
+
+    if (!db) { S.mode = "local"; render(); return; }
+    S.mode = "live"; S.db = db;
+    S.daysCol = db.collection("days");
+    S.meta = db.doc("meta/settings");
+    const timer = setTimeout(() => { if (!S.loaded) { S.slow = true; renderBanner(); } }, 10000);
+    S.meta.onSnapshot((s) => {
+      if (s.exists) { const d = s.data(); S.settings = { target: num(d.target) || 2200, addBack: d.addBack !== false }; }
+      render();
+    }, (err) => { S.dbError = (err && err.code) || "unavailable"; renderBanner(); });
+    S.daysCol.orderBy("date", "desc").limit(WINDOW).onSnapshot((snap) => {
+      S.days = new Map(snap.docs.map((d) => [d.id, d.data()]));
+      if (!snap.metadata.fromCache) { S.loaded = true; S.slow = false; clearTimeout(timer); }
+      render();
+    }, (err) => { clearTimeout(timer); S.dbError = (err && err.code) || "unavailable"; renderBanner(); });
+    initGarmin();
+  }
+  start();
+})();
+</script>

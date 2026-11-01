@@ -1,0 +1,6 @@
+# Cloudflare Worker for the Garmin Sync connector (see garmin-connector/worker.js).
+# The Worker name must match the name in the Cloudflare dashboard.
+name = "fuel-log"
+main = "garmin-connector/worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
