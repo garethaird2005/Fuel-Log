@@ -1,369 +1,475 @@
 <title>Fuel Log</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: one narrow column like a watch screen grown up: sticky date bar, energy gauge, food and training logs, a 7-day strip, and a thumb bar pinned to the bottom. */
+/* Layout: an iPhone-style app. A translucent nav bar over a large title, then inset grouped cards
+   (plan, calorie ring, food, training, last 7 days) and a translucent toolbar for adding entries.
+   Sheets slide up from the bottom and can be dragged down to close. */
 :root {
-  --bg: #EDF1F4;
+  --bg: #F2F2F7;
   --surface: #FFFFFF;
-  --ink: #13202B;
-  --muted: #5A6976;
-  --line: #D6DEE5;
-  --fuel: #B35A0A;
-  --fuel-soft: #F6E3CF;
-  --burn: #1F6FC5;
-  --burn-soft: #D9E8F8;
-  --over: #C2362B;
-  --over-soft: #F8DEDB;
-  --c-amber: #9A6200; --c-violet: #6B4BC4; --c-teal: #0B7F72; --c-rose: #B8326A; --c-rest: #B4C0CA;
-  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
-  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --radius: 14px;
+  --fill: rgba(118, 118, 128, .12);
+  --fill-2: rgba(118, 118, 128, .2);
+  --ink: #000000;
+  --muted: #6D6D72;
+  --sep: rgba(60, 60, 67, .29);
+  --tint: #0066CC;
+  --tint-on-fill: #0066CC;
+  --tint-fill: #0071E3;
+  --fuel: #E07000; --fuel-ink: #A84A00; --fuel-soft: rgba(255, 149, 0, .16);
+  --train: #28A745; --train-ink: #1B7431; --train-soft: rgba(52, 199, 89, .16);
+  --over: #D70015; --over-soft: rgba(255, 59, 48, .13);
+  --c-amber: #C08400; --c-violet: #AF52DE; --c-teal: #1A8FA6; --c-rose: #FF2D55; --c-rest: #C7C7CC;
+  --material: rgba(249, 249, 249, .8);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --radius: 12px;
+  --spring: cubic-bezier(.32, .72, 0, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
-    --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
-    --over-soft: #3A1916; --c-amber: #F2B544; --c-violet: #B39CFF; --c-teal: #45C8B4; --c-rose: #F284B0; --c-rest: #43525F;
+    --bg: #000000; --surface: #1C1C1E; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .36);
+    --ink: #FFFFFF; --muted: rgba(235, 235, 245, .6); --sep: rgba(84, 84, 88, .65);
+    --tint: #0A84FF; --tint-on-fill: #64B5FF; --tint-fill: #0071E3;
+    --fuel: #FF9F0A; --fuel-ink: #FF9F0A; --fuel-soft: rgba(255, 159, 10, .2);
+    --train: #30D158; --train-ink: #30D158; --train-soft: rgba(48, 209, 88, .2);
+    --over: #FF453A; --over-soft: rgba(255, 69, 58, .2);
+    --c-amber: #FFD60A; --c-violet: #BF5AF2; --c-teal: #40C8E0; --c-rose: #FF375F; --c-rest: #48484A;
+    --material: rgba(29, 29, 31, .78);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
-  --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
-  --over-soft: #3A1916; --c-amber: #F2B544; --c-violet: #B39CFF; --c-teal: #45C8B4; --c-rose: #F284B0; --c-rest: #43525F;
+  --bg: #000000; --surface: #1C1C1E; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .36);
+  --ink: #FFFFFF; --muted: rgba(235, 235, 245, .6); --sep: rgba(84, 84, 88, .65);
+  --tint: #0A84FF; --tint-on-fill: #64B5FF; --tint-fill: #0071E3;
+  --fuel: #FF9F0A; --fuel-ink: #FF9F0A; --fuel-soft: rgba(255, 159, 10, .2);
+  --train: #30D158; --train-ink: #30D158; --train-soft: rgba(48, 209, 88, .2);
+  --over: #FF453A; --over-soft: rgba(255, 69, 58, .2);
+  --c-amber: #FFD60A; --c-violet: #BF5AF2; --c-teal: #40C8E0; --c-rose: #FF375F; --c-rest: #48484A;
+  --material: rgba(29, 29, 31, .78);
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+html { -webkit-tap-highlight-color: transparent; }
 body {
-  background: var(--bg); color: var(--ink);
-  font: 400 16px/1.45 var(--font-body);
-  -webkit-text-size-adjust: 100%;
-}
-body::before {
-  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
-  z-index: 10; background: var(--bg);
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 17px/1.3 var(--font); letter-spacing: -.01em;
+  -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
 }
 .gutter {
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.col { max-width: 592px; margin-inline: auto; }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
-h2 { font-size: 1.35rem; letter-spacing: .01em; }
-h3 { font-size: 1.05rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-button, input, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-:focus-visible { outline: 3px solid var(--burn); outline-offset: 2px; border-radius: 6px; }
-.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.col { max-width: 600px; margin-inline: auto; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; -webkit-user-select: none; user-select: none; }
+:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; border-radius: 8px; }
+.num { font-family: var(--font-round); font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.i { width: 22px; height: 22px; flex: none; }
+.i.sm { width: 14px; height: 14px; }
 
-/* Date bar */
-.datebar {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
-  background: var(--bg); padding-block: 10px;
+/* Nav bar: plain over the large title, frosted once the title scrolls under it */
+.nav {
+  position: sticky; top: 0; z-index: 5;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bg); border-bottom: .5px solid transparent;
+  transition: background-color .2s, border-color .2s;
 }
-.datebar .col { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
-.navbtn {
-  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
-  background: var(--surface); font-size: 1.4rem; line-height: 1;
+.nav.is-compact {
+  background: var(--material); border-bottom-color: var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
 }
-.navbtn:disabled { opacity: .35; cursor: default; }
-.date { text-align: center; border: 0; background: none; padding: 0; }
-.date strong { display: block; font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.1; }
-.date span { color: var(--muted); font-size: .85rem; }
-
-main { padding-block: 4px calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
-
-.banner {
-  margin: 0; padding: 10px 14px; border-radius: 10px; font-size: .9rem;
-  background: var(--fuel-soft); color: var(--ink);
+.nav-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 44px; }
+.nav-btn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0;
+  background: none; color: var(--tint);
 }
+.nav-btn:first-child { justify-self: start; margin-left: -12px; }
+.nav-btn:disabled { color: var(--muted); opacity: .4; cursor: default; }
+.nav-right { justify-self: end; display: flex; align-items: center; margin-right: -12px; }
+.today-btn { border: 0; background: none; color: var(--tint); font-size: 17px; height: 44px; padding: 0 6px; }
+.nav-title { font-size: 17px; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.nav.is-compact .nav-title { opacity: 1; }
+.hero { padding: 2px 0 2px; }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.large-title { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: .01em; }
 
-/* Gauge */
-.gauge { background: var(--surface); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
-.big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.big .num { font-size: 3.6rem; font-weight: 700; line-height: .9; letter-spacing: -.01em; }
-.big .unit { font-size: 1rem; color: var(--muted); }
+main { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+.stack { display: grid; gap: 26px; }
+.group { display: grid; gap: 8px; }
+.group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 2px; }
+.group-head h2 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: .015em; }
+.aside { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.link { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; padding: 6px 0; color: var(--tint); font-size: 17px; }
+.card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; }
+.banner { margin: 0; padding: 12px 14px; border-radius: var(--radius); font-size: 15px; background: var(--fuel-soft); }
+
+/* Calories: a progress ring with the kcal left beside it */
+.energy { display: grid; gap: 16px; }
+.energy-top { display: flex; align-items: center; gap: 20px; }
+.ring { width: 116px; height: 116px; flex: none; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 14; }
+.ring-track { stroke: var(--fuel-soft); }
+.ring-fill { stroke: var(--fuel); stroke-linecap: round; transition: stroke-dashoffset .7s var(--spring), stroke .2s; }
+.ring-fill.over { stroke: var(--over); }
+.big { display: grid; gap: 2px; min-width: 0; }
+.big .num { font-size: 50px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+.big .unit { font-size: 15px; font-weight: 500; color: var(--muted); }
 .big.is-over .num { color: var(--over); }
-.track { position: relative; height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; }
-.track span { position: absolute; top: 0; bottom: 0; transition: width .35s ease, left .35s ease; }
-.track .earned {
-  background: repeating-linear-gradient(135deg, var(--burn-soft) 0 6px, var(--burn) 6px 8px);
-  opacity: .9;
-}
-.track .eaten { left: 0; background: var(--fuel); border-radius: 7px 0 0 7px; }
-.track .over { background: var(--over); }
 .stats, .macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .stats div, .macros div { min-width: 0; }
-.stats dt, .macros dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.stats dd { margin: 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.stats .fuel { color: var(--fuel); }
-.stats .burn { color: var(--burn); }
-.macros { border-top: 1px solid var(--line); padding-top: 12px; }
-.macros dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
-.macros dd small { color: var(--muted); font-weight: 400; }
+.stats dt, .macros dt { font-size: 13px; font-weight: 500; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--font-round); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats .fuel { color: var(--fuel-ink); }
+.stats .burn { color: var(--train-ink); }
+.macros { border-top: .5px solid var(--sep); padding-top: 12px; }
+.macros dd { margin: 0; font-family: var(--font-round); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.macros dd small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.mini { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--fill-2); overflow: hidden; }
+.mini span { display: block; height: 100%; border-radius: 2px; background: var(--tint); transition: width .5s var(--spring); }
 
-/* Logs */
-.log { background: var(--surface); border-radius: var(--radius); padding: 14px 16px 6px; }
-.log-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 6px; }
-.log-head .sum { font-family: var(--font-display); font-size: 1.15rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* Lists inside cards: full-width rows, hairlines inset from the left */
+.list-card { padding: 0; overflow: hidden; }
 .entries { list-style: none; margin: 0; padding: 0; }
-.entries li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
-.entries li:first-child { border-top: 0; }
-.what { flex: 1; min-width: 0; display: grid; }
+.entries li { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 16px; }
+.entries li + li::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.what { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .what .name { overflow-wrap: anywhere; }
-.what .sub { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
-.kcal { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.what .sub { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.kcal { font-family: var(--font-round); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .del {
-  width: 32px; height: 32px; flex: none; border-radius: 50%; border: 0;
-  background: transparent; color: var(--muted); font-size: .95rem;
+  position: relative; flex: none; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 0;
+  background: var(--fill); color: var(--muted); font-size: 11px; font-weight: 700; display: grid; place-items: center;
 }
-.del:hover { background: var(--bg); }
-.empty { color: var(--muted); font-size: .92rem; padding: 6px 0 12px; margin: 0; }
-.garmin { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding: 10px 0; }
-.garmin .status { flex: 1 1 200px; min-width: 0; }
+.del::after { content: ""; position: absolute; inset: -9px; }
+.empty { margin: 0; font-size: 15px; color: var(--muted); }
+.tag { color: var(--train-ink); font-weight: 600; }
+.planned { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 30px; border-bottom: .5px solid var(--sep); }
+.planned::before { content: ""; position: absolute; left: 16px; top: 12px; bottom: 12px; width: 4px; border-radius: 2px; background: var(--train); }
+.planned .done { color: var(--train-ink); font-weight: 600; font-size: 15px; white-space: nowrap; }
+.garmin { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 12px 16px; border-top: .5px solid var(--sep); }
+.garmin .status { flex: 1 1 180px; min-width: 0; }
 .garmin-actions { display: flex; gap: 8px; }
-.btn.small { min-height: 36px; padding: 0 12px; font-size: .9rem; }
-.tag { color: var(--burn); font-weight: 600; }
 
-/* Plan: the day's timetable from the exam sprint, read from the private log */
-.plan { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 12px; }
-.plan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
-.kicker { margin: 0; font-family: var(--font-body); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.plan-focus { margin: 0; font-size: .95rem; font-weight: 500; line-height: 1.4; text-wrap: pretty; }
-.exam-pill {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px;
-  border: 1px solid var(--over); background: var(--over-soft); color: var(--over); font-weight: 600; font-size: .85rem; white-space: nowrap;
+/* Buttons */
+.btn {
+  min-height: 50px; padding: 0 18px; border: 0; border-radius: 14px;
+  background: var(--fill); color: var(--tint-on-fill); font-size: 17px; font-weight: 600;
 }
-.exam-pill .num { font-size: 1.05rem; }
-.nownext { display: grid; gap: 10px; }
-.now { border-left: 4px solid var(--c, var(--line)); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
-.nn-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.nn-label { margin: 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.nn-text { margin: 0; font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
-.nn-step { margin: 0; font-size: .88rem; color: var(--muted); }
-.nn-step b, .next b { color: var(--ink); font-weight: 600; }
-.next { margin: 0; font-size: .92rem; color: var(--muted); padding-left: 16px; overflow-wrap: anywhere; }
-.blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.blk { display: grid; grid-template-columns: 3.1em minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 6px 0 6px 10px; border-left: 3px solid var(--c, var(--line)); }
-.blk-time { font-size: .95rem; line-height: 1.15; }
-.blk-time small { display: block; font-size: .8rem; color: var(--muted); }
-.blk-text { overflow-wrap: anywhere; font-size: .92rem; line-height: 1.3; }
-.blk.is-study .blk-text, .blk.is-train .blk-text, .blk.is-exam .blk-text { font-weight: 600; }
-.blk.is-exam .blk-text { color: var(--over); }
-.blk.is-rest .blk-text { color: var(--muted); }
-.blk.is-past { opacity: .55; }
-.blk.is-now { background: var(--bg); border-radius: 0 10px 10px 0; }
-.tick {
-  width: 36px; height: 36px; padding: 0; border-radius: 50%; border: 2px solid var(--c, var(--line)); background: transparent;
-  color: transparent; font-size: 1rem; font-weight: 700; line-height: 1; display: grid; place-items: center;
-}
-.tick[aria-pressed="true"] { background: var(--c); color: var(--surface); }
-.tick:disabled { opacity: .35; cursor: default; }
-.btn.tick-btn { border-color: var(--c); white-space: nowrap; flex: none; }
-.btn.tick-btn[aria-pressed="true"] { background: var(--c); color: var(--surface); }
-.plan-extra { margin-top: 10px; font-size: .88rem; color: var(--muted); display: grid; gap: 6px; }
-.plan-extra p { margin: 0; }
-.plan-extra b { color: var(--ink); font-weight: 600; }
-.plan-extra q { font-style: italic; color: var(--ink); }
-.plan-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; border-top: 1px solid var(--line); padding-top: 10px; }
-.plan-foot p { margin: 0; font-size: .88rem; color: var(--muted); }
-.plan-foot b { color: var(--ink); font-weight: 600; }
-.planned { display: flex; align-items: center; gap: 10px; padding: 8px 0 8px 10px; margin-bottom: 4px; border-left: 3px solid var(--burn); }
-.planned .done { color: var(--burn); font-weight: 600; font-size: .9rem; white-space: nowrap; }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.btn.primary { background: var(--tint-fill); color: #FFFFFF; }
+.btn.small { min-height: 34px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:active:not(:disabled), .tbtn:active, .link:active, .nav-btn:active:not(:disabled), .today-btn:active, .chip:active { opacity: .55; }
 
-/* Sprint overview sheet */
-.sp { display: grid; gap: 8px; }
-.sp-list { list-style: none; margin: 0; padding: 0; }
-.sp-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
-.sp-list li:first-child { border-top: 0; }
-.sp-when { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.sp-when.soon { color: var(--over); }
-.prog { display: grid; gap: 4px; }
-.prog-row { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
-.prog-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
-.prog-bar span { display: block; height: 100%; border-radius: 4px; background: var(--c); }
-.sp-day { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; padding: 9px 0; display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 10px; text-align: left; }
-.sp-day:first-child { border-top: 0; }
-.sp-day > b { font-weight: 600; }
-.sp-day > span { color: var(--muted); font-size: .9rem; }
-.sp-day .ex { color: var(--over); font-weight: 600; }
-.sp-day.is-current > b { color: var(--burn); }
-.method { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.method li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 8px; font-size: .92rem; }
-.rules { margin: 0; display: grid; gap: 8px; }
-.rules dt { font-weight: 600; }
-.rules dd { margin: 0; color: var(--muted); font-size: .92rem; }
-
-/* Week strip */
-.week-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.week-head p { margin: 0; color: var(--muted); font-size: .85rem; }
-.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
-.wk { border: 0; background: none; padding: 4px 0; display: grid; justify-items: center; gap: 4px; border-radius: 10px; min-width: 0; }
-.wk.is-current { background: var(--surface); }
-.wk-plot { position: relative; width: 60%; max-width: 30px; height: 84px; border-radius: 6px; background: var(--line); overflow: hidden; }
-.wk-bar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--fuel); }
-.wk-bar.over { background: var(--over); }
-.wk-target { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--ink); opacity: .55; }
-.wk-num { font-family: var(--font-display); font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--muted); }
-.wk-day { font-size: .75rem; font-weight: 600; }
-.wk-day.exam { color: var(--over); }
-
-/* Thumb bar */
-.thumbbar {
+/* Toolbar */
+.toolbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
-  background: var(--surface); border-top: 1px solid var(--line);
-  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--material); border-top: .5px solid var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
 }
-.thumbbar .col { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
-.pill {
-  min-height: 48px; border-radius: 12px; border: 1px solid transparent; padding: 0 14px;
-  font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; letter-spacing: .02em;
+.toolbar .col { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; }
+.tbtn {
+  min-height: 50px; padding: 0 16px; border: 0; border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 17px; font-weight: 600;
 }
-.pill.food { background: var(--fuel-soft); border-color: var(--fuel); }
-.pill.train { background: var(--burn-soft); border-color: var(--burn); }
-.pill.plain { background: transparent; border-color: var(--line); font-family: var(--font-body); font-size: .95rem; font-weight: 500; }
+.tbtn.food { background: var(--fuel-soft); color: var(--fuel-ink); }
+.tbtn.train { background: var(--train-soft); color: var(--train-ink); }
+.tbtn.plain { background: var(--fill); color: var(--ink); }
 
 /* Sheets */
 dialog.sheet {
-  border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 592px;
-  max-height: calc(100% - 40px - env(safe-area-inset-top, 0px));
-  border-radius: 18px 18px 0 0; background: var(--surface); color: var(--ink);
+  border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 600px;
+  max-height: calc(100% - 24px - env(safe-area-inset-top, 0px));
+  border-radius: 14px 14px 0 0; background: var(--surface); color: var(--ink);
   overflow-y: auto; overscroll-behavior: contain;
 }
-dialog.sheet::backdrop { background: rgb(5 10 15 / .55); }
+dialog.sheet[open] { animation: sheet-in .4s var(--spring); }
+dialog.sheet::backdrop { background: rgb(0 0 0 / .4); animation: fade-in .3s ease; }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } }
+#sprintSheet { background: var(--bg); }
 .sheet-body {
-  display: grid; gap: 14px;
-  padding-top: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 16px;
+  padding-top: 6px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
-input, textarea {
-  width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg);
-  border-radius: 10px; padding: 10px 12px; font-size: 1rem; color: var(--ink);
+.grabber { width: 36px; height: 5px; margin: 0 auto -4px; border-radius: 3px; background: var(--fill-2); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; }
+.sheet-head h2 { font-size: 20px; font-weight: 700; }
+.close {
+  position: relative; flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--fill); color: var(--muted); display: grid; place-items: center;
 }
-textarea { resize: vertical; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.close::after { content: ""; position: absolute; inset: -7px; }
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+input:not([type="checkbox"]):not([type="file"]), textarea {
+  width: 100%; min-width: 0; border: 0; border-radius: 10px; background: var(--fill);
+  padding: 11px 12px; font-size: 17px; color: var(--ink); -webkit-appearance: none; appearance: none;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
+textarea { resize: vertical; line-height: 1.35; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row > * { flex: 1 1 auto; }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.btn {
-  min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
-  padding: 0 16px; font-weight: 600;
-}
-.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-.btn:disabled { opacity: .5; cursor: default; }
-.status { margin: 0; font-size: .88rem; color: var(--muted); min-height: 1.2em; }
-.hint { margin: 0; font-size: .85rem; color: var(--muted); }
-.check { display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: .95rem; }
-.check input { width: 22px; height: 22px; flex: none; }
-.kcal-edit { display: flex; align-items: center; gap: 4px; color: var(--muted); }
-.kcal-edit input { width: 5.2em; padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+.status { margin: 0; font-size: 15px; color: var(--muted); min-height: 1.2em; }
+.hint { margin: 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.divider { border: 0; border-top: .5px solid var(--sep); margin: 0; }
+.est-list:not(:empty) { background: var(--fill); border-radius: var(--radius); }
+.kcal-edit { display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--muted); }
+.kcal-edit input { width: 5.4em; padding: 7px 10px; text-align: right; font-variant-numeric: tabular-nums; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 12px;
-  font-size: .9rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%; padding: 8px 14px; border: 0; border-radius: 999px; background: var(--fill);
+  font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.chip b { font-weight: 600; color: var(--fuel); margin-left: 4px; }
-details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
-details[open] summary { margin-bottom: 10px; }
-.divider { border: 0; border-top: 1px solid var(--line); margin: 0; }
+.chip b { margin-left: 6px; font-weight: 600; color: var(--fuel-ink); }
+details > summary {
+  list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  min-height: 44px; font-size: 17px; color: var(--tint);
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after {
+  content: ""; width: 8px; height: 8px; margin-right: 4px; flex: none;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform .25s var(--spring);
+}
+details[open] > summary::after { transform: rotate(45deg); }
+.switch-group { border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); }
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px;
+  font-size: 17px; font-weight: 400; color: var(--ink);
+}
+.switch-row + .switch-row { border-top: .5px solid var(--sep); }
+.switch {
+  position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px;
+  background: var(--fill-2); -webkit-appearance: none; appearance: none; cursor: pointer; transition: background-color .25s;
+}
+.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #FFFFFF; box-shadow: 0 3px 8px rgba(0, 0, 0, .15), 0 3px 1px rgba(0, 0, 0, .06);
+  transition: transform .25s var(--spring);
+}
+.switch:checked { background: #34C759; }
+.switch:checked::before { transform: translateX(20px); }
+
+/* Week */
+.week-card { display: grid; gap: 10px; padding: 14px 10px 12px; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.wk { border: 0; background: none; padding: 6px 0; display: grid; justify-items: center; gap: 6px; border-radius: 10px; min-width: 0; }
+.wk.is-current { background: var(--fill); }
+.wk-plot { position: relative; width: 16px; height: 96px; border-radius: 8px; background: var(--fill); overflow: hidden; }
+.wk-bar { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px; background: var(--fuel); }
+.wk-bar.over { background: var(--over); }
+.wk-target { position: absolute; left: 0; right: 0; height: 2px; background: var(--ink); opacity: .5; }
+.wk-num { font-family: var(--font-round); font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wk-day { font-size: 13px; font-weight: 600; color: var(--muted); }
+.wk.is-current .wk-day { color: var(--ink); }
+.wk-day.exam, .wk.is-current .wk-day.exam { color: var(--over); }
+.week-avg { padding: 0 6px; }
+
+/* Plan */
+.plan { display: grid; gap: 12px; }
+.plan-head { align-items: center; }
+.plan-head .exam-pill { margin-left: auto; }
+.kicker { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.plan-focus { margin: 0; font-size: 15px; line-height: 1.4; text-wrap: pretty; }
+.exam-pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: var(--over-soft); color: var(--over); font-size: 15px; font-weight: 600; white-space: nowrap;
+}
+.exam-pill .num { font-weight: 700; }
+.exam-pill .i.sm { width: 12px; height: 12px; margin-right: -3px; }
+.nownext { display: grid; gap: 10px; }
+.now { position: relative; display: grid; gap: 4px; padding: 2px 0 2px 14px; }
+.now::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 4px; border-radius: 2px; background: var(--c, var(--sep)); }
+.nn-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nn-label { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.nn-text { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.nn-step { margin: 0; font-size: 15px; color: var(--muted); }
+.nn-step b, .next b { color: var(--ink); font-weight: 600; }
+.next { margin: 0; padding-left: 14px; font-size: 15px; color: var(--muted); overflow-wrap: anywhere; }
+.btn.tick-btn { flex: none; white-space: nowrap; color: var(--ink); }
+.btn.tick-btn[aria-pressed="true"] { background: var(--train-soft); color: var(--train-ink); }
+#planDetails { border-top: .5px solid var(--sep); margin-bottom: -4px; }
+#planDetails > summary { color: var(--ink); gap: 10px; }
+.sum-detail { margin-left: auto; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-detail b { color: var(--ink); font-weight: 600; }
+.blocks { list-style: none; margin: 0 0 4px; padding: 0; }
+.blk { position: relative; display: grid; grid-template-columns: 3.1em minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0 8px 14px; }
+.blk::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 4px; border-radius: 2px; background: var(--c, var(--sep)); }
+.blk + .blk::after { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: .5px solid var(--sep); }
+.blk-time { font-family: var(--font-round); font-size: 15px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.blk-time small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); }
+.blk-text { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.blk.is-study .blk-text, .blk.is-train .blk-text, .blk.is-exam .blk-text { font-weight: 600; }
+.blk.is-exam .blk-text { color: var(--over); }
+.blk.is-rest .blk-text { color: var(--muted); }
+.blk.is-past { opacity: .5; }
+.blk.is-now { margin: 0 -8px; padding-left: 22px; padding-right: 8px; border-radius: 10px; background: var(--fill); }
+.blk.is-now::before { left: 8px; }
+.blk.is-now::after, .blk.is-now + .blk::after { display: none; }
+.tick {
+  position: relative; width: 26px; height: 26px; margin-right: 2px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--c, var(--sep)); background: transparent; color: transparent;
+  display: grid; place-items: center; font-size: 13px; font-weight: 800; line-height: 1;
+  transition: background-color .2s, color .2s;
+}
+.tick::after { content: ""; position: absolute; inset: -9px; }
+.tick[aria-pressed="true"] { background: var(--c); color: #FFFFFF; }
+.tick:disabled { opacity: .35; cursor: default; }
+.plan-extra { display: grid; gap: 6px; margin: 4px 0 8px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.plan-extra p { margin: 0; }
+.plan-extra b { color: var(--ink); font-weight: 600; }
+.plan-extra q { font-style: italic; color: var(--ink); }
+
+/* Plan overview sheet: grouped lists like Settings */
+.sp { display: grid; gap: 6px; }
+.sp h3 { padding: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.sp-card { background: var(--surface); border-radius: var(--radius); }
+.sp-pad { padding: 12px 16px; }
+.sp-foot { padding: 0 4px; }
+.sp-list { list-style: none; margin: 0; padding: 0 16px; }
+.sp-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; }
+.sp-list li + li { border-top: .5px solid var(--sep); }
+.sp-when { font-family: var(--font-round); font-size: 17px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
+.sp-when.soon { color: var(--over); }
+.prog { display: grid; gap: 6px; }
+.prog + .prog { margin-top: 12px; }
+.prog-row { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
+.prog-row .num { color: var(--muted); }
+.prog-bar { height: 6px; border-radius: 3px; background: var(--fill-2); overflow: hidden; }
+.prog-bar span { display: block; height: 100%; border-radius: 3px; background: var(--c); }
+.sp-days { padding: 0 16px; }
+.sp-day {
+  width: 100%; padding: 11px 0; border: 0; background: none; text-align: left;
+  display: grid; grid-template-columns: 4.4em minmax(0, 1fr) auto; gap: 10px; align-items: center;
+}
+.sp-day + .sp-day { border-top: .5px solid var(--sep); }
+.sp-day::after {
+  content: ""; width: 7px; height: 7px; margin-right: 4px;
+  border-right: 2px solid var(--fill-2); border-bottom: 2px solid var(--fill-2); transform: rotate(-45deg);
+}
+.sp-day > b { font-weight: 600; }
+.sp-day > span { font-size: 15px; color: var(--muted); }
+.sp-day .ex { color: var(--over); font-weight: 600; }
+.sp-day.is-current > b { color: var(--tint); }
+.method { margin: 0; list-style: none; display: grid; gap: 8px; }
+.method li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 8px; font-size: 15px; }
+.rules { margin: 0; display: grid; gap: 10px; }
+.rules dt { font-size: 15px; font-weight: 600; }
+.rules dd { margin: 0; font-size: 15px; color: var(--muted); }
 
 /* Toast */
 .toast {
   position: fixed; z-index: 20; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-  max-width: 560px; margin-inline: auto;
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin-inline: auto;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: var(--ink); color: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: .95rem;
+  padding: 12px 16px; border-radius: 14px; font-size: 15px;
+  background: rgba(36, 36, 38, .94); color: #FFFFFF; box-shadow: 0 8px 30px rgba(0, 0, 0, .2);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  animation: toast-in .35s var(--spring);
 }
-.toast button { border: 0; background: none; color: var(--surface); font-weight: 700; text-decoration: underline; padding: 4px; }
+.toast button { border: 0; background: none; padding: 4px; color: #64B5FF; font-size: 15px; font-weight: 600; }
+@keyframes toast-in { from { transform: translateY(14px); opacity: 0; } }
 
-@media (prefers-reduced-motion: reduce) { .track span { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after, ::backdrop { animation: none !important; transition: none !important; }
+}
 </style>
 
-<header class="datebar gutter">
-  <div class="col">
-    <button id="prevDay" class="navbtn" aria-label="Previous day">‹</button>
-    <button id="dayLabel" class="date" aria-label="Go to today"><strong id="dayName">Today</strong><span id="dayDate"></span></button>
-    <button id="nextDay" class="navbtn" aria-label="Next day">›</button>
+<header class="nav gutter" id="nav">
+  <div class="col nav-inner">
+    <button id="prevDay" class="nav-btn" type="button" aria-label="Previous day"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4.5 7.5 12l7.5 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="nav-title" id="navTitle" aria-hidden="true">Today</span>
+    <div class="nav-right">
+      <button id="dayLabel" class="today-btn" type="button" hidden>Today</button>
+      <button id="nextDay" class="nav-btn" type="button" aria-label="Next day"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
   </div>
 </header>
 
 <main class="gutter">
-  <div class="col" style="display:grid;gap:14px">
+  <div class="col stack">
+    <div class="hero">
+      <p class="eyebrow" id="dayDate"></p>
+      <h1 class="large-title" id="dayName">Today</h1>
+    </div>
     <p id="banner" class="banner" role="status" hidden></p>
 
-    <section class="plan" id="planCard" aria-labelledby="planKicker" hidden>
-      <div class="plan-top">
-        <h2 class="kicker" id="planKicker"></h2>
-        <button class="exam-pill" id="examPill" type="button" data-open="sprintSheet" hidden></button>
-      </div>
-      <p class="plan-focus" id="planFocus"></p>
-      <div class="nownext" id="nowNext" hidden></div>
-      <details id="planDetails">
-        <summary id="planSummary">Whole day</summary>
-        <ol class="blocks" id="planBlocks"></ol>
-        <div class="plan-extra" id="planExtra"></div>
-      </details>
-      <div class="plan-foot">
-        <p id="planStudy"></p>
-        <button class="btn small" type="button" data-open="sprintSheet">Overview</button>
+    <section class="group" id="planCard" aria-labelledby="planHead" hidden>
+      <div class="group-head plan-head"><h2 id="planHead">Plan</h2><button class="exam-pill" id="examPill" type="button" data-open="sprintSheet" hidden></button><button class="link" id="planOverview" type="button" data-open="sprintSheet">Overview<svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      <div class="card plan">
+        <p class="kicker" id="planKicker"></p>
+        <p class="plan-focus" id="planFocus"></p>
+        <div class="nownext" id="nowNext" hidden></div>
+        <details id="planDetails">
+          <summary id="planSummary"><span id="planSumLabel">Whole day</span><span class="sum-detail" id="planStudy"></span></summary>
+          <ol class="blocks" id="planBlocks"></ol>
+          <div class="plan-extra" id="planExtra"></div>
+        </details>
       </div>
     </section>
 
-    <section class="gauge" aria-label="Energy balance">
-      <div class="big" id="big"><span class="num" id="left">0</span><span class="unit" id="leftLabel">kcal left</span></div>
-      <div class="track" aria-hidden="true"><span class="earned" id="barEarned"></span><span class="eaten" id="barEaten"></span><span class="over" id="barOver"></span></div>
-      <dl class="stats">
-        <div><dt>Target</dt><dd id="sTarget">0</dd></div>
-        <div><dt>Eaten</dt><dd id="sEaten" class="fuel">0</dd></div>
-        <div><dt>Training</dt><dd id="sBurned" class="burn">0</dd></div>
-      </dl>
-      <dl class="macros">
-        <div><dt>Protein</dt><dd id="mP">0 <small>g</small></dd></div>
-        <div><dt>Carbs</dt><dd id="mC">0 <small>g</small></dd></div>
-        <div><dt>Fat</dt><dd id="mF">0 <small>g</small></dd></div>
-      </dl>
+    <section class="group" aria-labelledby="energyHead">
+      <div class="group-head"><h2 id="energyHead">Calories</h2></div>
+      <div class="card energy">
+        <div class="energy-top">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="52"/><circle class="ring-fill" id="ringFill" cx="60" cy="60" r="52"/></svg>
+          <div class="big" id="big"><span class="num" id="left">0</span><span class="unit" id="leftLabel">kcal left</span></div>
+        </div>
+        <dl class="stats">
+          <div><dt>Target</dt><dd id="sTarget">0</dd></div>
+          <div><dt>Eaten</dt><dd id="sEaten" class="fuel">0</dd></div>
+          <div><dt>Training</dt><dd id="sBurned" class="burn">0</dd></div>
+        </dl>
+        <dl class="macros">
+          <div><dt>Protein</dt><dd id="mP">0 <small>g</small></dd></div>
+          <div><dt>Carbs</dt><dd id="mC">0 <small>g</small></dd></div>
+          <div><dt>Fat</dt><dd id="mF">0 <small>g</small></dd></div>
+        </dl>
+      </div>
     </section>
 
-    <section class="log" aria-labelledby="foodHead">
-      <div class="log-head"><h2 id="foodHead">Food</h2><span class="sum" id="foodSum"></span></div>
-      <ul class="entries" id="foodList"></ul>
+    <section class="group" aria-labelledby="foodHead">
+      <div class="group-head"><h2 id="foodHead">Food</h2><span class="aside" id="foodSum"></span></div>
+      <div class="card list-card"><ul class="entries" id="foodList"></ul></div>
     </section>
 
-    <section class="log" aria-labelledby="trainHead">
-      <div class="log-head"><h2 id="trainHead">Training</h2><span class="sum" id="trainSum"></span></div>
-      <div id="trainPlan"></div>
-      <ul class="entries" id="trainList"></ul>
-      <div class="garmin" id="garminRow" hidden>
-        <p class="status" id="garminStatus" role="status"></p>
-        <div class="garmin-actions">
-          <button class="btn small" id="garminAction" type="button" hidden></button>
-          <button class="btn small" id="syncBtn" type="button">Sync Garmin</button>
+    <section class="group" aria-labelledby="trainHead">
+      <div class="group-head"><h2 id="trainHead">Training</h2><span class="aside" id="trainSum"></span></div>
+      <div class="card list-card">
+        <div id="trainPlan"></div>
+        <ul class="entries" id="trainList"></ul>
+        <div class="garmin" id="garminRow" hidden>
+          <p class="status" id="garminStatus" role="status"></p>
+          <div class="garmin-actions">
+            <button class="btn small" id="garminAction" type="button" hidden></button>
+            <button class="btn small" id="syncBtn" type="button">Sync Garmin</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <section aria-labelledby="weekHead">
-      <div class="week-head"><h3 id="weekHead">Last 7 days</h3><p id="weekAvg"></p></div>
-      <div class="week" id="week"></div>
+    <section class="group" aria-labelledby="weekHead">
+      <div class="group-head"><h2 id="weekHead">Last 7 days</h2></div>
+      <div class="card week-card"><div class="week" id="week"></div><p class="hint week-avg" id="weekAvg"></p></div>
     </section>
   </div>
 </main>
 
-<nav class="thumbbar gutter" aria-label="Add entries">
+<nav class="toolbar gutter" aria-label="Add entries">
   <div class="col">
-    <button class="pill food" data-open="foodSheet">+ Food</button>
-    <button class="pill train" data-open="trainSheet">+ Training</button>
-    <button class="pill plain" data-open="setSheet">Target</button>
+    <button class="tbtn food" type="button" data-open="foodSheet" aria-label="Add food"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Food</button>
+    <button class="tbtn train" type="button" data-open="trainSheet" aria-label="Add training"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Training</button>
+    <button class="tbtn plain" type="button" data-open="setSheet" aria-label="Daily target">Target</button>
   </div>
 </nav>
 
@@ -371,9 +477,10 @@ details[open] summary { margin-bottom: 10px; }
 
 <dialog class="sheet" id="foodSheet" aria-labelledby="foodSheetTitle">
   <div class="sheet-body">
-    <div class="sheet-head"><h2 id="foodSheetTitle">Add food</h2><button class="del" data-close aria-label="Close">✕</button></div>
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="foodSheetTitle">Add food</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
 
-    <div id="estimateBlock" style="display:grid;gap:10px">
+    <div id="estimateBlock" style="display:grid;gap:12px">
       <label for="describe">Describe what you ate
         <textarea id="describe" rows="2" placeholder="2 scrambled eggs, 2 slices of toast with butter, a flat white"></textarea>
       </label>
@@ -383,11 +490,11 @@ details[open] summary { margin-bottom: 10px; }
         <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
       </div>
       <p class="status" id="estStatus" role="status"></p>
-      <ul class="entries" id="estList"></ul>
+      <ul class="entries est-list" id="estList"></ul>
       <button class="btn primary" id="addEstBtn" type="button" hidden>Add</button>
     </div>
 
-    <div id="recentBlock" hidden style="display:grid;gap:8px">
+    <div id="recentBlock" class="sp" hidden>
       <h3>Recent</h3>
       <div class="chips" id="recent"></div>
     </div>
@@ -395,7 +502,7 @@ details[open] summary { margin-bottom: 10px; }
     <hr class="divider">
     <details id="manual">
       <summary>Enter it yourself</summary>
-      <form id="manualForm" style="display:grid;gap:10px">
+      <form id="manualForm" style="display:grid;gap:12px">
         <label for="mName">Food<input id="mName" required autocomplete="off" placeholder="Chicken salad"></label>
         <div class="grid4">
           <label for="mKcal">kcal<input id="mKcal" type="number" inputmode="numeric" min="0" required></label>
@@ -411,7 +518,8 @@ details[open] summary { margin-bottom: 10px; }
 
 <dialog class="sheet" id="trainSheet" aria-labelledby="trainSheetTitle">
   <form class="sheet-body" id="trainForm">
-    <div class="sheet-head"><h2 id="trainSheetTitle">Add training</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="trainSheetTitle">Add training</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
     <label for="wName">Activity<input id="wName" list="workTypes" required autocomplete="off" placeholder="Run"></label>
     <datalist id="workTypes"><option value="Run"></option><option value="Strength"></option><option value="Cycle"></option><option value="Walk"></option><option value="Swim"></option><option value="HIIT"></option><option value="Yoga"></option></datalist>
     <div class="grid2">
@@ -426,20 +534,24 @@ details[open] summary { margin-bottom: 10px; }
 
 <dialog class="sheet" id="setSheet" aria-labelledby="setSheetTitle">
   <form class="sheet-body" id="setForm">
-    <div class="sheet-head"><h2 id="setSheetTitle">Daily target</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="setSheetTitle">Daily target</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
     <label for="target">Calories per day<input id="target" type="number" inputmode="numeric" min="800" max="6000" required></label>
-    <label class="check" for="addBack"><input id="addBack" type="checkbox"> Add training calories to my target</label>
-    <label class="check" for="planTargets" id="planTargetsRow" hidden><input id="planTargets" type="checkbox"> Follow the plan's targets on plan days</label>
+    <div class="switch-group">
+      <label class="switch-row" for="addBack"><span>Add training calories to my target</span><input id="addBack" class="switch" type="checkbox"></label>
+      <label class="switch-row" for="planTargets" id="planTargetsRow" hidden><span>Follow the plan's targets on plan days</span><input id="planTargets" class="switch" type="checkbox"></label>
+    </div>
     <p class="hint" id="planHint" hidden></p>
     <p class="hint">Garmin workouts count their active calories, so your resting burn isn't counted twice. Your log saves to your Claude account and only you can see it.</p>
-    <button class="btn primary" type="submit">Save target</button>
+    <button class="btn primary" type="submit">Save</button>
   </form>
 </dialog>
 
 <dialog class="sheet" id="sprintSheet" aria-labelledby="sprintTitle">
   <div class="sheet-body">
-    <div class="sheet-head"><h2 id="sprintTitle">Plan</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
-    <div id="sprintBody" style="display:grid;gap:20px"></div>
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="sprintTitle">Plan</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
+    <div id="sprintBody" style="display:grid;gap:22px"></div>
   </div>
 </dialog>
 
@@ -462,6 +574,7 @@ details[open] summary { margin-bottom: 10px; }
   const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
   const dur = (m) => { m = Math.max(1, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
   const hrs = (m) => `${nf1.format(m / 60)} h`;
+  const CHEV = '<svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const shortDate = (k) => fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
   const S = {
@@ -508,7 +621,7 @@ details[open] summary { margin-bottom: 10px; }
     let h = 0; for (const ch of String(code || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     return `var(--c-${SUBJECT_COLORS[(i >= 0 ? i : h) % SUBJECT_COLORS.length]})`;
   }
-  const catColor = (b) => b.c === "study" ? subjectColor(b.subject) : b.c === "train" ? "var(--burn)" : b.c === "exam" ? "var(--over)" : b.c === "routine" ? "var(--muted)" : "var(--c-rest)";
+  const catColor = (b) => b.c === "study" ? subjectColor(b.subject) : b.c === "train" ? "var(--train)" : b.c === "exam" ? "var(--over)" : b.c === "routine" ? "var(--muted)" : "var(--c-rest)";
   const catName = (b) => b.c === "study" ? (b.subject || "Study") : ({ train: "Training", exam: "Exam", routine: "Routine", rest: "Rest or free time" })[b.c] || "";
   const lastDay = () => { let last = today(); for (const k of S.plan.days.keys()) if (k > last) last = k; return last; };
   const examsList = () => (S.plan.meta && Array.isArray(S.plan.meta.exams) ? S.plan.meta.exams : [])
@@ -568,9 +681,10 @@ details[open] summary { margin-bottom: 10px; }
     const own = examOn(k);
     const ex = own && examStatus(own).state !== "done" ? own : examsList().find((x) => examStatus(x).state !== "done");
     $("examPill").hidden = !ex;
+    $("planOverview").hidden = !!ex;  // the pill opens the overview while an exam is still to come
     if (ex) {
       const st = examStatus(ex);
-      $("examPill").innerHTML = `${esc(ex.code)} · <span class="num">${esc(st.text)}</span>`;
+      $("examPill").innerHTML = `${esc(ex.code)} · <span class="num">${esc(st.text)}</span>${CHEV}`;
       $("examPill").setAttribute("aria-label", `${ex.code} exam, ${fromKey(ex.date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} at ${ex.start}${ex.venue ? `, ${ex.venue}` : ""}: ${st.text}. Open the plan overview.`);
     }
 
@@ -597,7 +711,7 @@ details[open] summary { margin-bottom: 10px; }
     $("nowNext").innerHTML = nn;
     $("nowNext").hidden = !nn;
 
-    $("planSummary").textContent = `Whole day · ${blocks.length} blocks`;
+    $("planSumLabel").textContent = "Whole day";
     $("planBlocks").innerHTML = blocks.map((b) => {
       const s = toMin(b.s), e = toMin(b.e), now = cur === b;
       const past = isToday && !now && (e != null ? e <= nm : s <= nm);
@@ -615,7 +729,8 @@ details[open] summary { margin-bottom: 10px; }
 
     const sb = blocks.filter(isStudy);
     const planned = sb.reduce((n, b) => n + blockMins(b), 0), done = sb.filter((b) => studied.has(b.s)).reduce((n, b) => n + blockMins(b), 0);
-    $("planStudy").innerHTML = sb.length ? `Study <b>${esc(hrs(done))}</b> of ${esc(hrs(planned))} done` : "";
+    const short = planned < 60;  // a lone 15-minute review reads better in minutes
+    $("planStudy").innerHTML = sb.length ? `<b>${esc(short ? fmt(done) : nf1.format(done / 60))}</b> of ${esc(short ? `${fmt(planned)} min` : hrs(planned))} studied` : `${blocks.length} blocks`;
     if (keep) { const again = (keep.inNow ? $("nowNext") : $("planBlocks")).querySelector(`[data-tick="${CSS.escape(keep.key)}"]`); if (again) again.focus(); }
   }
 
@@ -631,7 +746,7 @@ details[open] summary { margin-bottom: 10px; }
     const meta = S.plan.meta || {}, exams = examsList();
     const days = [...S.plan.days.values()].filter((d) => d && d.date).sort((a, b) => (a.date < b.date ? -1 : 1));
     const out = [];
-    if (exams.length) out.push(`<section class="sp"><h3>Exams</h3><ul class="sp-list">${exams.map((x) => {
+    if (exams.length) out.push(`<section class="sp"><h3>Exams</h3><ul class="sp-list sp-card">${exams.map((x) => {
       const st = examStatus(x);
       return `<li><div class="what"><span class="name"><b>${esc(x.code)}</b></span><span class="sub">${esc(shortDate(x.date))}, ${esc(x.start)}${x.end ? `–${esc(x.end)}` : ""}${x.venue ? ` · ${esc(x.venue)}` : ""}</span></div><span class="sp-when${st.state === "soon" || st.state === "now" ? " soon" : ""}">${esc(st.text)}</span></li>`;
     }).join("")}</ul></section>`);
@@ -649,18 +764,18 @@ details[open] summary { margin-bottom: 10px; }
       const order = (code) => { const i = exams.findIndex((x) => x.code === code); return i < 0 ? 99 : i; };
       const rows = [...tot.entries()].sort((a, b) => order(a[0]) - order(b[0]));
       const all = rows.reduce((a, [, r]) => ({ planned: a.planned + r.planned, done: a.done + r.done }), { planned: 0, done: 0 });
-      out.push(`<section class="sp"><h3>Study done</h3>${rows.map(([code, r]) => `<div class="prog" style="--c:${subjectColor(code)}"><div class="prog-row"><span>${esc(code)}</span><span class="num">${esc(hrs(r.done))} of ${esc(hrs(r.planned))}</span></div><div class="prog-bar"><span style="width:${r.planned ? Math.min(100, r.done / r.planned * 100) : 0}%"></span></div></div>`).join("")}
-        <p class="hint">${esc(hrs(all.done))} of ${esc(hrs(all.planned))} in total. Tick each study block in the day's plan when you finish it.</p></section>`);
+      out.push(`<section class="sp"><h3>Study done</h3><div class="sp-card sp-pad">${rows.map(([code, r]) => `<div class="prog" style="--c:${subjectColor(code)}"><div class="prog-row"><span>${esc(code)}</span><span class="num">${esc(hrs(r.done))} of ${esc(hrs(r.planned))}</span></div><div class="prog-bar"><span style="width:${r.planned ? Math.min(100, r.done / r.planned * 100) : 0}%"></span></div></div>`).join("")}</div>
+        <p class="hint sp-foot">${esc(hrs(all.done))} of ${esc(hrs(all.planned))} in total. Tick each study block in the day's plan when you finish it.</p></section>`);
     }
-    if (days.length) out.push(`<section class="sp"><h3>Days</h3><div>${days.map((d) => {
+    if (days.length) out.push(`<section class="sp"><h3>Days</h3><div class="sp-card sp-days">${days.map((d) => {
       const ex = examOn(d.date);
       return `<button class="sp-day${d.date === S.current ? " is-current" : ""}" type="button" data-plan-day="${esc(d.date)}"><b>${esc(fromKey(d.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" }))}</b><span>${ex ? `<span class="ex">${esc(ex.code)} exam.</span> ` : ""}${esc(d.focus || "")}</span></button>`;
     }).join("")}</div></section>`);
     const m = meta.method;
-    if (m && Array.isArray(m.steps) && m.steps.length) out.push(`<section class="sp"><h3>${esc(m.title || "Study method")}</h3><ol class="method">${m.steps.map((s) => `<li><b class="num">${fmt(s.min)} min</b><span>${esc(s.t)}</span></li>`).join("")}</ol>${m.rule ? `<p class="hint">${esc(m.rule)}</p>` : ""}</section>`);
-    const dl = (title, list) => Array.isArray(list) && list.length ? `<section class="sp"><h3>${title}</h3><dl class="rules">${list.map((r) => `<div><dt>${esc(r && r.h)}</dt><dd>${esc(r && r.t)}</dd></div>`).join("")}</dl></section>` : "";
+    if (m && Array.isArray(m.steps) && m.steps.length) out.push(`<section class="sp"><h3>${esc(m.title || "Study method")}</h3><ol class="method sp-card sp-pad">${m.steps.map((s) => `<li><b class="num">${fmt(s.min)} min</b><span>${esc(s.t)}</span></li>`).join("")}</ol>${m.rule ? `<p class="hint sp-foot">${esc(m.rule)}</p>` : ""}</section>`);
+    const dl = (title, list) => Array.isArray(list) && list.length ? `<section class="sp"><h3>${title}</h3><dl class="rules sp-card sp-pad">${list.map((r) => `<div><dt>${esc(r && r.h)}</dt><dd>${esc(r && r.t)}</dd></div>`).join("")}</dl></section>` : "";
     out.push(dl("Rules that don't move", meta.rules), dl("After the sprint", meta.after));
-    if (meta.note) out.push(`<p class="hint">${esc(meta.note)}</p>`);
+    if (meta.note) out.push(`<p class="hint sp-foot">${esc(meta.note)}</p>`);
     $("sprintTitle").textContent = meta.name || "Plan";
     $("sprintBody").innerHTML = out.join("") || `<p class="hint">No plan is saved yet.</p>`;
   }
@@ -690,16 +805,23 @@ details[open] summary { margin-bottom: 10px; }
 
   // ---------- rendering ----------
   function dayWords(k) {
-    const t = today();
-    const name = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : k === shift(t, 1) ? "Tomorrow" : fromKey(k).toLocaleDateString(undefined, { weekday: "long" });
-    const date = fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: fromKey(k).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
-    return { name, date };
+    const t = today(), d = fromKey(k);
+    const rel = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : k === shift(t, 1) ? "Tomorrow" : "";
+    const year = d.getFullYear() === new Date().getFullYear() ? undefined : "numeric";
+    return {
+      name: rel || d.toLocaleDateString(undefined, { weekday: "long" }),
+      date: d.toLocaleDateString(undefined, rel ? { weekday: "long", day: "numeric", month: "long", year } : { day: "numeric", month: "long", year }),
+      short: rel || d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+    };
   }
 
+  const RING = 2 * Math.PI * 52;
   function render() {
     const k = S.current, w = dayWords(k);
     $("dayName").textContent = w.name;
     $("dayDate").textContent = w.date;
+    $("navTitle").textContent = w.short;
+    $("dayLabel").hidden = k === today();
     $("nextDay").disabled = k >= lastDay();
 
     const t = totals(k);
@@ -710,15 +832,18 @@ details[open] summary { margin-bottom: 10px; }
     $("sTarget").textContent = fmt(t.budget);
     $("sEaten").textContent = fmt(t.eaten);
     $("sBurned").textContent = fmt(t.burned);
-    $("mP").innerHTML = t.protein ? `${fmt(t.p)} <small>/ ${fmt(t.protein)} g</small>` : `${fmt(t.p)} <small>g</small>`;
+    $("mP").innerHTML = t.protein
+      ? `${fmt(t.p)} <small>/ ${fmt(t.protein)} g</small><span class="mini"><span style="width:${Math.min(100, t.p / t.protein * 100)}%"></span></span>`
+      : `${fmt(t.p)} <small>g</small>`;
     $("mC").innerHTML = `${fmt(t.c)} <small>g</small>`;
     $("mF").innerHTML = `${fmt(t.f)} <small>g</small>`;
 
-    const scale = Math.max(t.budget, t.eaten, 1);
-    const pct = (v) => `${Math.max(0, v) / scale * 100}%`;
-    Object.assign($("barEarned").style, { left: pct(t.target), width: pct(t.budget - t.target) });
-    Object.assign($("barEaten").style, { width: pct(Math.min(t.eaten, t.budget)) });
-    Object.assign($("barOver").style, { left: pct(t.budget), width: pct(t.eaten - t.budget) });
+    // The ring fills as you eat; it turns red once you pass the target.
+    const ring = $("ringFill"), share = t.budget > 0 ? Math.min(1, t.eaten / t.budget) : (t.eaten > 0 ? 1 : 0);
+    ring.style.strokeDasharray = `${RING}`;
+    ring.style.strokeDashoffset = `${RING * (1 - share)}`;
+    ring.style.opacity = t.eaten > 0 ? "1" : "0";
+    ring.classList.toggle("over", over);
 
     $("foodSum").textContent = t.food.length ? `${fmt(t.eaten)} kcal` : "";
     $("foodList").innerHTML = t.food.length ? t.food.map((x) => `
@@ -860,7 +985,26 @@ details[open] summary { margin-bottom: 10px; }
   document.querySelectorAll("dialog.sheet").forEach((d) => {
     d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
     d.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => d.close()));
+    // Drag the top of a sheet down to close it, as on iPhone.
+    let y0 = null, dy = 0;
+    d.addEventListener("touchstart", (e) => {
+      if (d.scrollTop > 0 || !e.target.closest(".grabber, .sheet-head") || e.target.closest("button")) return;
+      y0 = e.touches[0].clientY; dy = 0; d.style.transition = "none";
+    }, { passive: true });
+    d.addEventListener("touchmove", (e) => {
+      if (y0 == null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0); d.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    d.addEventListener("touchend", () => {
+      if (y0 == null) return;
+      y0 = null; d.style.transition = "transform .25s cubic-bezier(.32, .72, 0, 1)";
+      if (dy > 90) { d.style.transform = "translateY(100%)"; setTimeout(() => { d.close(); d.style.transform = ""; d.style.transition = ""; }, 220); }
+      else d.style.transform = "";
+    });
   });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => $("nav").classList.toggle("is-compact", !e.isIntersecting), { rootMargin: "-48px 0px 0px 0px" }).observe($("dayName"));
+  }
 
   // Recent foods: tap to log again
   let recentItems = [];
