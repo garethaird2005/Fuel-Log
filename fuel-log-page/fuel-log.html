@@ -16,6 +16,8 @@
   --burn: #1F6FC5;
   --burn-soft: #D9E8F8;
   --over: #C2362B;
+  --over-soft: #F8DEDB;
+  --c-amber: #9A6200; --c-violet: #6B4BC4; --c-teal: #0B7F72; --c-rose: #B8326A; --c-rest: #B4C0CA;
   --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius: 14px;
@@ -24,12 +26,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
     --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
+    --over-soft: #3A1916; --c-amber: #F2B544; --c-violet: #B39CFF; --c-teal: #45C8B4; --c-rose: #F284B0; --c-rest: #43525F;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0D1318; --surface: #151E26; --ink: #E4EAF0; --muted: #8E9BA7; --line: #26323D;
   --fuel: #F09A45; --fuel-soft: #3B2915; --burn: #62A6EE; --burn-soft: #172A3E; --over: #F0675B;
+  --over-soft: #3A1916; --c-amber: #F2B544; --c-violet: #B39CFF; --c-teal: #45C8B4; --c-rose: #F284B0; --c-rest: #43525F;
   color-scheme: dark;
 }
 
@@ -126,6 +130,76 @@ main { padding-block: 4px calc(96px + env(safe-area-inset-bottom, 0px)); display
 .btn.small { min-height: 36px; padding: 0 12px; font-size: .9rem; }
 .tag { color: var(--burn); font-weight: 600; }
 
+/* Plan: the day's timetable from the exam sprint, read from the private log */
+.plan { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 12px; }
+.plan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.kicker { margin: 0; font-family: var(--font-body); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.plan-focus { margin: 0; font-size: .95rem; font-weight: 500; line-height: 1.4; text-wrap: pretty; }
+.exam-pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid var(--over); background: var(--over-soft); color: var(--over); font-weight: 600; font-size: .85rem; white-space: nowrap;
+}
+.exam-pill .num { font-size: 1.05rem; }
+.nownext { display: grid; gap: 10px; }
+.now { border-left: 4px solid var(--c, var(--line)); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
+.nn-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nn-label { margin: 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.nn-text { margin: 0; font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
+.nn-step { margin: 0; font-size: .88rem; color: var(--muted); }
+.nn-step b, .next b { color: var(--ink); font-weight: 600; }
+.next { margin: 0; font-size: .92rem; color: var(--muted); padding-left: 16px; overflow-wrap: anywhere; }
+.blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.blk { display: grid; grid-template-columns: 3.1em minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 6px 0 6px 10px; border-left: 3px solid var(--c, var(--line)); }
+.blk-time { font-size: .95rem; line-height: 1.15; }
+.blk-time small { display: block; font-size: .8rem; color: var(--muted); }
+.blk-text { overflow-wrap: anywhere; font-size: .92rem; line-height: 1.3; }
+.blk.is-study .blk-text, .blk.is-train .blk-text, .blk.is-exam .blk-text { font-weight: 600; }
+.blk.is-exam .blk-text { color: var(--over); }
+.blk.is-rest .blk-text { color: var(--muted); }
+.blk.is-past { opacity: .55; }
+.blk.is-now { background: var(--bg); border-radius: 0 10px 10px 0; }
+.tick {
+  width: 36px; height: 36px; padding: 0; border-radius: 50%; border: 2px solid var(--c, var(--line)); background: transparent;
+  color: transparent; font-size: 1rem; font-weight: 700; line-height: 1; display: grid; place-items: center;
+}
+.tick[aria-pressed="true"] { background: var(--c); color: var(--surface); }
+.tick:disabled { opacity: .35; cursor: default; }
+.btn.tick-btn { border-color: var(--c); white-space: nowrap; flex: none; }
+.btn.tick-btn[aria-pressed="true"] { background: var(--c); color: var(--surface); }
+.plan-extra { margin-top: 10px; font-size: .88rem; color: var(--muted); display: grid; gap: 6px; }
+.plan-extra p { margin: 0; }
+.plan-extra b { color: var(--ink); font-weight: 600; }
+.plan-extra q { font-style: italic; color: var(--ink); }
+.plan-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.plan-foot p { margin: 0; font-size: .88rem; color: var(--muted); }
+.plan-foot b { color: var(--ink); font-weight: 600; }
+.planned { display: flex; align-items: center; gap: 10px; padding: 8px 0 8px 10px; margin-bottom: 4px; border-left: 3px solid var(--burn); }
+.planned .done { color: var(--burn); font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Sprint overview sheet */
+.sp { display: grid; gap: 8px; }
+.sp-list { list-style: none; margin: 0; padding: 0; }
+.sp-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.sp-list li:first-child { border-top: 0; }
+.sp-when { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sp-when.soon { color: var(--over); }
+.prog { display: grid; gap: 4px; }
+.prog-row { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
+.prog-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.prog-bar span { display: block; height: 100%; border-radius: 4px; background: var(--c); }
+.sp-day { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; padding: 9px 0; display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 10px; text-align: left; }
+.sp-day:first-child { border-top: 0; }
+.sp-day > b { font-weight: 600; }
+.sp-day > span { color: var(--muted); font-size: .9rem; }
+.sp-day .ex { color: var(--over); font-weight: 600; }
+.sp-day.is-current > b { color: var(--burn); }
+.method { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.method li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 8px; font-size: .92rem; }
+.rules { margin: 0; display: grid; gap: 8px; }
+.rules dt { font-weight: 600; }
+.rules dd { margin: 0; color: var(--muted); font-size: .92rem; }
+
 /* Week strip */
 .week-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .week-head p { margin: 0; color: var(--muted); font-size: .85rem; }
@@ -138,6 +212,7 @@ main { padding-block: 4px calc(96px + env(safe-area-inset-bottom, 0px)); display
 .wk-target { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--ink); opacity: .55; }
 .wk-num { font-family: var(--font-display); font-size: .85rem; font-variant-numeric: tabular-nums; color: var(--muted); }
 .wk-day { font-size: .75rem; font-weight: 600; }
+.wk-day.exam { color: var(--over); }
 
 /* Thumb bar */
 .thumbbar {
@@ -159,6 +234,7 @@ dialog.sheet {
   border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 592px;
   max-height: calc(100% - 40px - env(safe-area-inset-top, 0px));
   border-radius: 18px 18px 0 0; background: var(--surface); color: var(--ink);
+  overflow-y: auto; overscroll-behavior: contain;
 }
 dialog.sheet::backdrop { background: rgb(5 10 15 / .55); }
 .sheet-body {
@@ -225,6 +301,24 @@ details[open] summary { margin-bottom: 10px; }
   <div class="col" style="display:grid;gap:14px">
     <p id="banner" class="banner" role="status" hidden></p>
 
+    <section class="plan" id="planCard" aria-labelledby="planKicker" hidden>
+      <div class="plan-top">
+        <h2 class="kicker" id="planKicker"></h2>
+        <button class="exam-pill" id="examPill" type="button" data-open="sprintSheet" hidden></button>
+      </div>
+      <p class="plan-focus" id="planFocus"></p>
+      <div class="nownext" id="nowNext" hidden></div>
+      <details id="planDetails">
+        <summary id="planSummary">Whole day</summary>
+        <ol class="blocks" id="planBlocks"></ol>
+        <div class="plan-extra" id="planExtra"></div>
+      </details>
+      <div class="plan-foot">
+        <p id="planStudy"></p>
+        <button class="btn small" type="button" data-open="sprintSheet">Overview</button>
+      </div>
+    </section>
+
     <section class="gauge" aria-label="Energy balance">
       <div class="big" id="big"><span class="num" id="left">0</span><span class="unit" id="leftLabel">kcal left</span></div>
       <div class="track" aria-hidden="true"><span class="earned" id="barEarned"></span><span class="eaten" id="barEaten"></span><span class="over" id="barOver"></span></div>
@@ -247,6 +341,7 @@ details[open] summary { margin-bottom: 10px; }
 
     <section class="log" aria-labelledby="trainHead">
       <div class="log-head"><h2 id="trainHead">Training</h2><span class="sum" id="trainSum"></span></div>
+      <div id="trainPlan"></div>
       <ul class="entries" id="trainList"></ul>
       <div class="garmin" id="garminRow" hidden>
         <p class="status" id="garminStatus" role="status"></p>
@@ -334,9 +429,18 @@ details[open] summary { margin-bottom: 10px; }
     <div class="sheet-head"><h2 id="setSheetTitle">Daily target</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
     <label for="target">Calories per day<input id="target" type="number" inputmode="numeric" min="800" max="6000" required></label>
     <label class="check" for="addBack"><input id="addBack" type="checkbox"> Add training calories to my target</label>
+    <label class="check" for="planTargets" id="planTargetsRow" hidden><input id="planTargets" type="checkbox"> Follow the plan's targets on plan days</label>
+    <p class="hint" id="planHint" hidden></p>
     <p class="hint">Garmin workouts count their active calories, so your resting burn isn't counted twice. Your log saves to your Claude account and only you can see it.</p>
     <button class="btn primary" type="submit">Save target</button>
   </form>
+</dialog>
+
+<dialog class="sheet" id="sprintSheet" aria-labelledby="sprintTitle">
+  <div class="sheet-body">
+    <div class="sheet-head"><h2 id="sprintTitle">Plan</h2><button class="del" type="button" data-close aria-label="Close">✕</button></div>
+    <div id="sprintBody" style="display:grid;gap:20px"></div>
+  </div>
 </dialog>
 
 <script>
@@ -353,15 +457,23 @@ details[open] summary { margin-bottom: 10px; }
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const today = () => keyOf(new Date());
   const WINDOW = 120;
+  const nf1 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+  const toMin = (hm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hm || "")); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
+  const dur = (m) => { m = Math.max(1, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
+  const hrs = (m) => `${nf1.format(m / 60)} h`;
+  const shortDate = (k) => fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
   const S = {
     mode: "loading",          // loading | live | local | private
     slow: false, dbError: null,
     db: null, daysCol: null, meta: null, sample: null,
-    settings: { target: 2200, addBack: true },
+    settings: { target: 2200, addBack: true, planTargets: true },
     days: new Map(),          // from the live subscription (newest WINDOW days)
     extra: new Map(),         // older days fetched on demand, plus this view's own writes
+    plan: { meta: null, days: new Map() },  // the exam sprint: meta/plan and plan/<date>
     current: today(),
+    follow: true,             // the view is on today, so it moves on at midnight
     est: [],
   };
 
@@ -376,9 +488,181 @@ details[open] summary { margin-bottom: 10px; }
   function totals(k) {
     const d = dayView(k);
     const eaten = sum(d.food, "kcal"), burned = sum(d.workouts, "kcal");
-    const target = num(S.settings.target) || 2200;
-    const budget = target + (S.settings.addBack ? burned : 0);
-    return { eaten, burned, target, budget, left: budget - eaten, p: sum(d.food, "p"), c: sum(d.food, "c"), f: sum(d.food, "f"), food: d.food || [], workouts: d.workouts || [] };
+    const fuel = planFuel(k);
+    // A plan day's target already allows for training, so workouts are only added on other days.
+    const target = fuel ? fuel.kcal : (num(S.settings.target) || 2200);
+    const budget = target + (!fuel && S.settings.addBack ? burned : 0);
+    return { eaten, burned, target, budget, left: budget - eaten, p: sum(d.food, "p"), c: sum(d.food, "c"), f: sum(d.food, "f"), protein: fuel ? fuel.protein : 0, food: d.food || [], workouts: d.workouts || [] };
+  }
+
+  // ---------- plan: the exam sprint timetable, saved in the private log ----------
+  const SUBJECT_COLORS = ["amber", "violet", "teal", "rose"];
+  const planDay = (k) => S.plan.days.get(k) || null;
+  const blocksOf = (pd) => (pd && Array.isArray(pd.blocks) ? pd.blocks : []).filter((b) => b && toMin(b.s) != null && typeof b.t === "string");
+  const blockMins = (b) => { const s = toMin(b.s), e = toMin(b.e); return e != null && e > s ? e - s : 0; };
+  const isStudy = (b) => b.c === "study";
+  function subjectColor(code) {
+    const list = S.plan.meta && Array.isArray(S.plan.meta.subjects) ? S.plan.meta.subjects : [];
+    const i = list.findIndex((x) => x && x.code === code);
+    if (i >= 0 && SUBJECT_COLORS.includes(list[i].color)) return `var(--c-${list[i].color})`;
+    let h = 0; for (const ch of String(code || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `var(--c-${SUBJECT_COLORS[(i >= 0 ? i : h) % SUBJECT_COLORS.length]})`;
+  }
+  const catColor = (b) => b.c === "study" ? subjectColor(b.subject) : b.c === "train" ? "var(--burn)" : b.c === "exam" ? "var(--over)" : b.c === "routine" ? "var(--muted)" : "var(--c-rest)";
+  const catName = (b) => b.c === "study" ? (b.subject || "Study") : ({ train: "Training", exam: "Exam", routine: "Routine", rest: "Rest or free time" })[b.c] || "";
+  const lastDay = () => { let last = today(); for (const k of S.plan.days.keys()) if (k > last) last = k; return last; };
+  const examsList = () => (S.plan.meta && Array.isArray(S.plan.meta.exams) ? S.plan.meta.exams : [])
+    .filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && toMin(x.start) != null)
+    .slice().sort((a, b) => (a.date + a.start < b.date + b.start ? -1 : 1));
+  const examOn = (k) => examsList().find((x) => x.date === k) || null;
+
+  function planFuel(k) {
+    const pd = planDay(k), meta = S.plan.meta;
+    if (!pd || !meta || S.settings.planTargets === false) return null;
+    const kc = meta.kcal || {}, trained = (dayView(k).workouts || []).length > 0;
+    const type = pd.fuel === "rest" || (pd.fuel === "optional" && !trained) ? "rest" : "training";
+    const kcal = num(kc[type]);
+    return kcal ? { kcal, type, optional: pd.fuel === "optional", protein: num(meta.protein) } : null;
+  }
+
+  // Where an exam stands from right now.
+  function examStatus(x) {
+    const t = today(), nm = nowMin(), s = toMin(x.start), e = toMin(x.end);
+    if (x.date < t || (x.date === t && e != null && nm >= e)) return { state: "done", text: "Done" };
+    if (x.date === t && nm >= s) return { state: "now", text: e != null ? `Now, until ${x.end}` : "Now" };
+    if (x.date === t) return { state: "soon", text: `In ${dur(s - nm)}` };
+    const days = Math.round((fromKey(x.date) - fromKey(t)) / 86400000);
+    return { state: days === 1 ? "soon" : "later", text: days === 1 ? "Tomorrow" : `${days} days` };
+  }
+
+  // Which step of the 90-minute method a study block is on.
+  function methodStep(b, nm) {
+    const m = S.plan.meta && S.plan.meta.method, steps = m && Array.isArray(m.steps) ? m.steps : [];
+    const total = steps.reduce((t, x) => t + num(x && x.min), 0);
+    if (!total || blockMins(b) !== total) return "";
+    let at = toMin(b.s);
+    for (let i = 0; i < steps.length; i++) {
+      const end = at + num(steps[i].min);
+      if (nm < end) return `<p class="nn-step"><b>Step ${i + 1} of ${steps.length}</b>, until ${z(Math.floor(end / 60))}:${z(end % 60)}: ${esc(steps[i].t)}</p>`;
+      at = end;
+    }
+    return "";
+  }
+
+  function renderPlan() {
+    const k = S.current, pd = planDay(k);
+    $("planCard").hidden = !pd;
+    if (!pd) return;
+    const meta = S.plan.meta || {}, t = today(), isToday = k === t, future = k > t;
+    const blocks = blocksOf(pd), nm = nowMin();
+    const studied = new Set(Array.isArray(dayView(k).studied) ? dayView(k).studied : []);
+    const act = document.activeElement;  // re-rendering replaces the tick buttons, so keep keyboard focus on the same one
+    const keep = act && act.dataset && act.dataset.tick != null ? { key: act.dataset.tick, inNow: !!act.closest("#nowNext") } : null;
+
+    const kind = examOn(k) ? "Exam day" : pd.fuel === "rest" ? "Rest day" : pd.fuel === "optional" ? "Run optional" : "Training day";
+    $("planKicker").textContent = [pd.day && pd.of ? `Day ${pd.day} of ${pd.of}` : meta.name || "Plan", kind].join(" · ");
+    $("planFocus").textContent = pd.focus || "";
+    $("planFocus").hidden = !pd.focus;
+
+    // This day's own exam until it's over, otherwise the next one still to come.
+    const own = examOn(k);
+    const ex = own && examStatus(own).state !== "done" ? own : examsList().find((x) => examStatus(x).state !== "done");
+    $("examPill").hidden = !ex;
+    if (ex) {
+      const st = examStatus(ex);
+      $("examPill").innerHTML = `${esc(ex.code)} · <span class="num">${esc(st.text)}</span>`;
+      $("examPill").setAttribute("aria-label", `${ex.code} exam, ${fromKey(ex.date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} at ${ex.start}${ex.venue ? `, ${ex.venue}` : ""}: ${st.text}. Open the plan overview.`);
+    }
+
+    // Now and next, on today only.
+    let cur = null, next = null;
+    if (isToday) for (const b of blocks) {
+      const s = toMin(b.s), e = toMin(b.e);
+      if (s <= nm && (e == null || nm < e)) cur = b;
+      if (s > nm && !next) next = b;
+    }
+    let nn = "";
+    if (cur) {
+      const e = toMin(cur.e), study = isStudy(cur), on = study && studied.has(cur.s);
+      nn += `<div class="now" style="--c:${catColor(cur)}">
+        <div class="nn-row"><p class="nn-label">${e != null ? `Now · ${esc(dur(e - nm))} left` : `Since ${esc(cur.s)}`}</p>
+        ${study ? `<button class="btn small tick-btn" type="button" data-tick="${esc(cur.s)}" aria-pressed="${on}">${on ? "Done ✓" : "Mark done"}</button>` : ""}</div>
+        <p class="nn-text">${esc(cur.t)}</p>${study ? methodStep(cur, nm) : ""}</div>`;
+    }
+    if (next) nn += `<p class="next"><b>Next ${esc(next.s)}</b>${cur ? "" : `, in ${esc(dur(toMin(next.s) - nm))}`} · ${esc(next.t)}</p>`;
+    else if (isToday) {
+      const first = blocksOf(planDay(shift(k, 1)))[0];
+      if (first) nn += `<p class="next"><b>Tomorrow ${esc(first.s)}</b> · ${esc(first.t)}</p>`;
+    }
+    $("nowNext").innerHTML = nn;
+    $("nowNext").hidden = !nn;
+
+    $("planSummary").textContent = `Whole day · ${blocks.length} blocks`;
+    $("planBlocks").innerHTML = blocks.map((b) => {
+      const s = toMin(b.s), e = toMin(b.e), now = cur === b;
+      const past = isToday && !now && (e != null ? e <= nm : s <= nm);
+      const study = isStudy(b), on = study && studied.has(b.s);
+      return `<li class="blk is-${esc(b.c)}${now ? " is-now" : ""}${past ? " is-past" : ""}" style="--c:${catColor(b)}">
+        <span class="blk-time num">${esc(b.s)}${b.e ? `<small>${esc(b.e)}</small>` : ""}</span>
+        <span class="blk-text">${esc(b.t)}<span class="sr">. ${esc(catName(b))}${now ? ", happening now" : ""}</span></span>
+        ${study ? `<button class="tick" type="button" data-tick="${esc(b.s)}" aria-pressed="${on}" aria-label="Done: ${esc(b.t)}"${future ? " disabled" : ""}>✓</button>` : "<span></span>"}</li>`;
+    }).join("");
+
+    const extra = [];
+    if (pd.map && pd.map.content) extra.push(`<p><b>${esc(pd.map.subject || "Today")}:</b> ${esc(pd.map.content)}${pd.map.use ? `. Use: ${esc(pd.map.use)}` : ""}.</p>`);
+    if (pd.quote) extra.push(`<p><q>${esc(pd.quote)}</q>${pd.quoteBy ? ` · ${esc(pd.quoteBy)}` : ""}</p>`);
+    $("planExtra").innerHTML = extra.join("");
+
+    const sb = blocks.filter(isStudy);
+    const planned = sb.reduce((n, b) => n + blockMins(b), 0), done = sb.filter((b) => studied.has(b.s)).reduce((n, b) => n + blockMins(b), 0);
+    $("planStudy").innerHTML = sb.length ? `Study <b>${esc(hrs(done))}</b> of ${esc(hrs(planned))} done` : "";
+    if (keep) { const again = (keep.inNow ? $("nowNext") : $("planBlocks")).querySelector(`[data-tick="${CSS.escape(keep.key)}"]`); if (again) again.focus(); }
+  }
+
+  // Planned training sits above the Training log; a logged or synced workout marks it done.
+  function renderTrainPlan(k, t) {
+    const tb = blocksOf(planDay(k)).filter((b) => b.c === "train");
+    const done = t.workouts.length > 0, future = k > today();
+    $("trainPlan").innerHTML = tb.map((b) => `<div class="planned"><div class="what"><span class="sub">Planned · ${esc(b.s)}${b.e ? `–${esc(b.e)}` : ""}</span><span class="name">${esc(b.t)}</span></div>
+      ${done ? `<span class="done">Done ✓</span>` : future ? "" : G.ready ? `<span class="sub">Syncs from Garmin</span>` : `<button class="btn small" type="button" data-plan-train="${esc(b.s)}">Log it</button>`}</div>`).join("");
+  }
+
+  function renderSprint() {
+    const meta = S.plan.meta || {}, exams = examsList();
+    const days = [...S.plan.days.values()].filter((d) => d && d.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const out = [];
+    if (exams.length) out.push(`<section class="sp"><h3>Exams</h3><ul class="sp-list">${exams.map((x) => {
+      const st = examStatus(x);
+      return `<li><div class="what"><span class="name"><b>${esc(x.code)}</b></span><span class="sub">${esc(shortDate(x.date))}, ${esc(x.start)}${x.end ? `–${esc(x.end)}` : ""}${x.venue ? ` · ${esc(x.venue)}` : ""}</span></div><span class="sp-when${st.state === "soon" || st.state === "now" ? " soon" : ""}">${esc(st.text)}</span></li>`;
+    }).join("")}</ul></section>`);
+
+    const tot = new Map();
+    for (const d of days) {
+      const st = new Set(Array.isArray(dayView(d.date).studied) ? dayView(d.date).studied : []);
+      for (const b of blocksOf(d)) if (isStudy(b)) {
+        const r = tot.get(b.subject) || { planned: 0, done: 0 };
+        r.planned += blockMins(b); if (st.has(b.s)) r.done += blockMins(b);
+        tot.set(b.subject, r);
+      }
+    }
+    if (tot.size) {
+      const order = (code) => { const i = exams.findIndex((x) => x.code === code); return i < 0 ? 99 : i; };
+      const rows = [...tot.entries()].sort((a, b) => order(a[0]) - order(b[0]));
+      const all = rows.reduce((a, [, r]) => ({ planned: a.planned + r.planned, done: a.done + r.done }), { planned: 0, done: 0 });
+      out.push(`<section class="sp"><h3>Study done</h3>${rows.map(([code, r]) => `<div class="prog" style="--c:${subjectColor(code)}"><div class="prog-row"><span>${esc(code)}</span><span class="num">${esc(hrs(r.done))} of ${esc(hrs(r.planned))}</span></div><div class="prog-bar"><span style="width:${r.planned ? Math.min(100, r.done / r.planned * 100) : 0}%"></span></div></div>`).join("")}
+        <p class="hint">${esc(hrs(all.done))} of ${esc(hrs(all.planned))} in total. Tick each study block in the day's plan when you finish it.</p></section>`);
+    }
+    if (days.length) out.push(`<section class="sp"><h3>Days</h3><div>${days.map((d) => {
+      const ex = examOn(d.date);
+      return `<button class="sp-day${d.date === S.current ? " is-current" : ""}" type="button" data-plan-day="${esc(d.date)}"><b>${esc(fromKey(d.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" }))}</b><span>${ex ? `<span class="ex">${esc(ex.code)} exam.</span> ` : ""}${esc(d.focus || "")}</span></button>`;
+    }).join("")}</div></section>`);
+    const m = meta.method;
+    if (m && Array.isArray(m.steps) && m.steps.length) out.push(`<section class="sp"><h3>${esc(m.title || "Study method")}</h3><ol class="method">${m.steps.map((s) => `<li><b class="num">${fmt(s.min)} min</b><span>${esc(s.t)}</span></li>`).join("")}</ol>${m.rule ? `<p class="hint">${esc(m.rule)}</p>` : ""}</section>`);
+    const dl = (title, list) => Array.isArray(list) && list.length ? `<section class="sp"><h3>${title}</h3><dl class="rules">${list.map((r) => `<div><dt>${esc(r && r.h)}</dt><dd>${esc(r && r.t)}</dd></div>`).join("")}</dl></section>` : "";
+    out.push(dl("Rules that don't move", meta.rules), dl("After the sprint", meta.after));
+    if (meta.note) out.push(`<p class="hint">${esc(meta.note)}</p>`);
+    $("sprintTitle").textContent = meta.name || "Plan";
+    $("sprintBody").innerHTML = out.join("") || `<p class="hint">No plan is saved yet.</p>`;
   }
 
   // ---------- writing ----------
@@ -407,7 +691,7 @@ details[open] summary { margin-bottom: 10px; }
   // ---------- rendering ----------
   function dayWords(k) {
     const t = today();
-    const name = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : fromKey(k).toLocaleDateString(undefined, { weekday: "long" });
+    const name = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : k === shift(t, 1) ? "Tomorrow" : fromKey(k).toLocaleDateString(undefined, { weekday: "long" });
     const date = fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: fromKey(k).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
     return { name, date };
   }
@@ -416,7 +700,7 @@ details[open] summary { margin-bottom: 10px; }
     const k = S.current, w = dayWords(k);
     $("dayName").textContent = w.name;
     $("dayDate").textContent = w.date;
-    $("nextDay").disabled = k >= today();
+    $("nextDay").disabled = k >= lastDay();
 
     const t = totals(k);
     const over = t.left < 0;
@@ -426,7 +710,7 @@ details[open] summary { margin-bottom: 10px; }
     $("sTarget").textContent = fmt(t.budget);
     $("sEaten").textContent = fmt(t.eaten);
     $("sBurned").textContent = fmt(t.burned);
-    $("mP").innerHTML = `${fmt(t.p)} <small>g</small>`;
+    $("mP").innerHTML = t.protein ? `${fmt(t.p)} <small>/ ${fmt(t.protein)} g</small>` : `${fmt(t.p)} <small>g</small>`;
     $("mC").innerHTML = `${fmt(t.c)} <small>g</small>`;
     $("mF").innerHTML = `${fmt(t.f)} <small>g</small>`;
 
@@ -448,6 +732,8 @@ details[open] summary { margin-bottom: 10px; }
       <span class="kcal">${fmt(x.kcal)}</span><button class="del" data-del="workouts" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("")
       : `<li><p class="empty">${S.mcp ? "No training logged. Tap Sync Garmin to pull in your workouts, or + Training to add one." : "No training logged. Tap + Training to add a workout."}</p></li>`;
 
+    renderPlan();
+    renderTrainPlan(k, t);
     renderWeek();
     renderBanner();
   }
@@ -459,9 +745,10 @@ details[open] summary { margin-bottom: 10px; }
     $("week").innerHTML = data.map((d) => {
       const label = fromKey(d.k).toLocaleDateString(undefined, { weekday: "narrow" });
       const long = fromKey(d.k).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-      return `<button class="wk${d.k === S.current ? " is-current" : ""}" data-goto="${d.k}" aria-label="${esc(long)}: ate ${fmt(d.eaten)} of ${fmt(d.budget)} kcal">
+      const ex = examOn(d.k);
+      return `<button class="wk${d.k === S.current ? " is-current" : ""}" data-goto="${d.k}" aria-label="${esc(long)}${ex ? `, ${esc(ex.code)} exam` : ""}: ate ${fmt(d.eaten)} of ${fmt(d.budget)} kcal">
         <span class="wk-plot"><span class="wk-bar${d.eaten > d.budget ? " over" : ""}" style="height:${d.eaten / max * 100}%"></span><span class="wk-target" style="bottom:calc(${d.budget / max * 100}% - 1px)"></span></span>
-        <span class="wk-num">${d.eaten ? fmt(d.eaten) : "–"}</span><span class="wk-day">${esc(label)}</span></button>`;
+        <span class="wk-num">${d.eaten ? fmt(d.eaten) : "–"}</span><span class="wk-day${ex ? " exam" : ""}">${esc(label)}</span></button>`;
     }).join("");
     const logged = data.filter((d) => d.eaten > 0);
     $("weekAvg").textContent = logged.length ? `Average ${fmt(sum(logged, "eaten") / logged.length)} kcal eaten on ${logged.length} logged day${logged.length === 1 ? "" : "s"}` : "Bars show calories eaten; the line is your target.";
@@ -491,10 +778,19 @@ details[open] summary { margin-bottom: 10px; }
 
   // ---------- navigation ----------
   function goTo(k) {
-    if (k > today()) k = today();
-    S.current = k; render(); ensureDay(k);
-    if (G.ready && !G.synced.has(k)) syncGarmin(rangeFor(k), false);
+    if (k > lastDay()) k = lastDay();
+    if (k !== S.current) $("planDetails").open = k > today();
+    S.current = k; S.follow = k === today();
+    render(); ensureDay(k);
+    if (G.ready && k <= today() && !G.synced.has(k)) syncGarmin(rangeFor(k), false);
   }
+  // Keep "now" current, and move on to the new day at midnight if the view was on today.
+  function tick() {
+    if (document.hidden) return;
+    if (S.follow && S.current !== today()) goTo(today()); else renderPlan();
+  }
+  setInterval(tick, 30000);
+  document.addEventListener("visibilitychange", tick);
   $("prevDay").addEventListener("click", () => goTo(shift(S.current, -1)));
   $("nextDay").addEventListener("click", () => goTo(shift(S.current, 1)));
   $("dayLabel").addEventListener("click", () => goTo(today()));
@@ -519,10 +815,45 @@ details[open] summary { margin-bottom: 10px; }
     toast(`Removed ${item ? item.name : "entry"}`, () => saveDay(k, before));
   });
 
+  // ---------- plan: tick study blocks, jump to days, log planned training ----------
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tick]");
+    if (!b || b.disabled || S.current > today()) return;
+    const k = S.current, d = getDay(k), key = b.dataset.tick;
+    const set = new Set(Array.isArray(d.studied) ? d.studied : []);
+    if (set.has(key)) set.delete(key); else set.add(key);
+    d.studied = [...set].sort();
+    b.focus();
+    saveDay(k, d);
+  });
+  $("sprintBody").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-plan-day]"); if (!b) return;
+    $("sprintSheet").close(); goTo(b.dataset.planDay); window.scrollTo({ top: 0 });
+  });
+  $("trainPlan").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-plan-train]"); if (!b) return;
+    const blk = blocksOf(planDay(S.current)).find((x) => x.c === "train" && x.s === b.dataset.planTrain); if (!blk) return;
+    const name = blk.t.split(/[,(.]/)[0].replace(/^optional\s+/i, "").trim();
+    $("wName").value = name.charAt(0).toUpperCase() + name.slice(1);
+    $("wMin").value = blockMins(blk) || "";
+    $("wKcal").value = ""; $("wNotes").value = "";
+    openSheet("trainSheet");
+    $("wKcal").focus();
+  });
+
   // ---------- sheets ----------
   function openSheet(id) {
-    if (id === "setSheet") { $("target").value = S.settings.target; $("addBack").checked = !!S.settings.addBack; }
-    if (id === "foodSheet") renderRecent();
+    const when = S.current === today() ? "" : ` · ${shortDate(S.current)}`;
+    if (id === "setSheet") {
+      $("target").value = S.settings.target; $("addBack").checked = !!S.settings.addBack;
+      const m = S.plan.meta, kc = (m && m.kcal) || {};
+      $("planTargetsRow").hidden = !m; $("planHint").hidden = !m;
+      $("planTargets").checked = S.settings.planTargets !== false;
+      if (m) $("planHint").textContent = `On ${m.name ? m.name.toLowerCase() : "plan"} days the target is ${fmt(kc.training)} kcal on training days and ${fmt(kc.rest)} kcal on rest days, with ${fmt(m.protein)} g protein. Those numbers already allow for training, so workouts aren't added on top. On a day where the run is optional, the training target applies once a workout is logged. The two settings above apply on every other day.`;
+    }
+    if (id === "foodSheet") { renderRecent(); $("foodSheetTitle").textContent = `Add food${when}`; }
+    if (id === "trainSheet") $("trainSheetTitle").textContent = `Add training${when}`;
+    if (id === "sprintSheet") renderSprint();
     $(id).showModal();
   }
   document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openSheet(b.dataset.open)));
@@ -579,8 +910,8 @@ details[open] summary { margin-bottom: 10px; }
     e.preventDefault();
     const target = Math.round(num($("target").value));
     if (target < 800 || target > 6000) { $("target").focus(); return; }
-    const next = { target, addBack: $("addBack").checked };
-    const changed = next.target !== S.settings.target || next.addBack !== S.settings.addBack;
+    const next = { target, addBack: $("addBack").checked, planTargets: S.plan.meta ? $("planTargets").checked : S.settings.planTargets !== false };
+    const changed = next.target !== S.settings.target || next.addBack !== S.settings.addBack || next.planTargets !== (S.settings.planTargets !== false);
     S.settings = next; render(); $("setSheet").close();
     if (changed && S.mode === "live") queue(() => S.meta.set(next), "Couldn't save your target. Check your connection and try again.");
   });
@@ -798,9 +1129,16 @@ Reply with only a JSON array, one object per item, numbers rounded to whole numb
     S.meta = db.doc("meta/settings");
     const timer = setTimeout(() => { if (!S.loaded) { S.slow = true; renderBanner(); } }, 10000);
     S.meta.onSnapshot((s) => {
-      if (s.exists) { const d = s.data(); S.settings = { target: num(d.target) || 2200, addBack: d.addBack !== false }; }
+      if (s.exists) { const d = s.data(); S.settings = { target: num(d.target) || 2200, addBack: d.addBack !== false, planTargets: d.planTargets !== false }; }
       render();
     }, (err) => { S.dbError = (err && err.code) || "unavailable"; renderBanner(); });
+    // The plan lives in the owner-only log, so it never shows to anyone the page is shared with.
+    db.doc("meta/plan").onSnapshot((s) => { S.plan.meta = s.exists ? s.data() : null; render(); }, () => {});
+    db.collection("plan").orderBy("date").limit(200).onSnapshot((snap) => {
+      S.plan.days = new Map(snap.docs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
+      if (!S.planSeen && S.plan.days.size) { S.planSeen = true; $("planDetails").open = S.current > today(); }
+      render();
+    }, () => {});
     S.daysCol.orderBy("date", "desc").limit(WINDOW).onSnapshot((snap) => {
       S.days = new Map(snap.docs.map((d) => [d.id, d.data()]));
       if (!snap.metadata.fromCache) { S.loaded = true; S.slow = false; clearTimeout(timer); }
