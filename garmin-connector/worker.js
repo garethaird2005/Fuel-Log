@@ -18,6 +18,7 @@ const MAX_DAYS = 92;
 const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const SERVER_INFO = { name: "garmin-sync", title: "Garmin Sync", version: "1.0.0" };
 const KEY_PAGE = "connect.garmin.com/app/settings/personalApiToken";
+const UA = "FuelLog-GarminSync/1.1 (+https://github.com/garethaird2005/Fuel-Log)";
 
 const ACTIVITY_SCHEMA = {
   type: "object",
@@ -259,24 +260,18 @@ async function accessToken(env, force) {
 
   let r;
   try {
-    r = await fetch(GARMIN + TOKEN_PATH, { method: "POST", headers: { Authorization: `ApiKey ${key}`, Accept: "application/json" } });
+    // The token comes back as raw text, so asking for JSON only gets HTTP 406. Accept anything, like Garmin's curl example.
+    r = await fetch(GARMIN + TOKEN_PATH, { method: "POST", headers: { Authorization: `ApiKey ${key}`, Accept: "*/*", "User-Agent": UA } });
   } catch {
     throw userError("Couldn't reach Garmin. Try again in a minute.");
   }
   if (r.status === 401 || r.status === 403) {
     throw userError(`Garmin rejected your Personal API key. It may have expired or been deleted. Create a new one at ${KEY_PAGE} and update GARMIN_API_KEY in Cloudflare.`);
   }
-  if (!r.ok) throw userError(`Garmin's token service answered ${r.status}. Try again in a few minutes.`);
-  const raw = (await r.text()).trim();
-  let token = null, expiresIn = null;
-  try {
-    const j = JSON.parse(raw);
-    token = j.access_token || j.accessToken || j.token || (j.data && (j.data.access_token || j.data.accessToken)) || null;
-    expiresIn = numOrNull(j.expires_in ?? j.expiresIn);
-  } catch {
-    if (/^[\w-]+\.[\w-]+\.[\w-]+$/.test(raw)) token = raw;
-  }
-  if (typeof token !== "string" || !token) throw userError("Garmin's token reply wasn't in the expected format.");
+  if (r.status === 429) throw userError("Garmin is limiting requests right now. Try again in a few minutes.");
+  if (!r.ok) throw userError(`Garmin's token service answered ${r.status}${await snippet(r)}.${r.status >= 500 ? " Try again in a few minutes." : ""}`);
+  const { token, expiresIn } = parseToken((await r.text()).trim());
+  if (!token) throw userError("Garmin's token reply wasn't in the expected format.");
   const exp = jwtExpiry(token) || (expiresIn ? Date.now() + expiresIn * 1000 : Date.now() + 23 * 3600_000);
   cached = { token, exp, key };
   return token;
@@ -286,7 +281,7 @@ async function garmin(path, env, retried = false) {
   const token = await accessToken(env, retried);
   let r;
   try {
-    r = await fetch(GARMIN + path, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+    r = await fetch(GARMIN + path, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json, */*;q=0.8", "User-Agent": UA } });
   } catch {
     throw userError("Couldn't reach Garmin. Try again in a minute.");
   }
@@ -306,6 +301,28 @@ async function garmin(path, env, retried = false) {
 }
 
 // ---------- helpers ----------
+
+// Garmin sends the access token as raw text. Also accept a JSON object, a JSON string or a "Bearer " prefix.
+function parseToken(raw) {
+  let j;
+  try { j = JSON.parse(raw); } catch { j = undefined; }
+  if (j && typeof j === "object") {
+    const t = j.access_token || j.accessToken || j.token || (j.data && (j.data.access_token || j.data.accessToken));
+    return { token: typeof t === "string" && t.trim() ? t.trim() : null, expiresIn: numOrNull(j.expires_in ?? j.expiresIn) };
+  }
+  const text = (typeof j === "string" ? j : raw).trim().replace(/^Bearer\s+/i, "");
+  return { token: /^[A-Za-z0-9._~+\/=-]{20,}$/.test(text) ? text : null, expiresIn: null };
+}
+
+// A short, single-line excerpt of an error reply, for the check page.
+async function snippet(r) {
+  try {
+    const t = (await r.text()).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+    return t ? ` (${t})` : "";
+  } catch {
+    return "";
+  }
+}
 
 function secretMatches(given, env) {
   const want = String(env.CONNECTOR_SECRET || "");

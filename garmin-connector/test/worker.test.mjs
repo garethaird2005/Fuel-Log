@@ -24,8 +24,10 @@ function defaultGarmin(pages) {
   return (url, init) => {
     if (url.includes("/personalapitoken-service/")) {
       assert.equal(init.headers.Authorization, "ApiKey key-abc");
+      // Like the real service: the token comes back as raw text, so a JSON-only Accept header gets 406.
+      if (!/\*\/\*|text\/plain/.test(init.headers.Accept || "*/*")) return res("Not Acceptable", 406);
       tokenCount++;
-      return res({ access_token: jwt(Math.floor(Date.now() / 1000) + 86400), token_type: "Bearer", n: tokenCount });
+      return res(jwt(Math.floor(Date.now() / 1000) + 86400));
     }
     if (url.includes("/activitylist-service/activities/search/activities")) {
       assert.match(init.headers.Authorization, /^Bearer /);
@@ -124,6 +126,21 @@ test("expired data token is refreshed once; rejected key explains the fix", asyn
   const bad = await callTool("get_activities", { start_date: "2026-11-01" });
   assert.equal(bad.body.result.isError, true);
   assert.match(bad.body.result.content[0].text, /personalApiToken/);
+});
+
+test("token replies as JSON or a quoted string also work; other refusals are explained", async () => {
+  const exp = Math.floor(Date.now() / 1000) + 86400;
+  for (const reply of [{ access_token: jwt(exp), expires_in: 86400 }, JSON.stringify(jwt(exp)), `Bearer ${jwt(exp)}`]) {
+    garminHandler = (url, init) => (url.includes("personalapitoken") ? res(reply) : defaultGarmin([[activity(9, "2026-11-01")]])(url, init));
+    const r = await worker.fetch(new Request(`https://x.workers.dev/check/${SECRET}`), env);
+    assert.match(await r.text(), /✓ Garmin accepted your Personal API key/, JSON.stringify(reply).slice(0, 40));
+  }
+  garminHandler = (url) => (url.includes("personalapitoken") ? res("<html><body>Bad request: missing header</body></html>", 400) : res([]));
+  const bad = await (await worker.fetch(new Request(`https://x.workers.dev/check/${SECRET}`), env)).text();
+  assert.match(bad, /answered 400 \(Bad request: missing header\)/);
+  assert.doesNotMatch(bad, /Try again in a few minutes/);
+  const sent = calls.filter((c) => c.url.includes("personalapitoken")).at(-1).init.headers;
+  assert.match(sent["User-Agent"], /FuelLog/);
 });
 
 test("garmin_get only allows Garmin service paths", async () => {
