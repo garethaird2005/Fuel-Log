@@ -1,0 +1,1295 @@
+<title>Fuel Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: an iPhone-style app. A translucent nav bar over a large title, then inset grouped cards
+   (plan, calorie ring, food, training, last 7 days) and a translucent toolbar for adding entries.
+   Sheets slide up from the bottom and can be dragged down to close. */
+:root {
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --fill: rgba(118, 118, 128, .12);
+  --fill-2: rgba(118, 118, 128, .2);
+  --ink: #000000;
+  --muted: #6D6D72;
+  --sep: rgba(60, 60, 67, .29);
+  --tint: #0066CC;
+  --tint-on-fill: #0066CC;
+  --tint-fill: #0071E3;
+  --fuel: #E07000; --fuel-ink: #A84A00; --fuel-soft: rgba(255, 149, 0, .16);
+  --train: #28A745; --train-ink: #1B7431; --train-soft: rgba(52, 199, 89, .16);
+  --over: #D70015; --over-soft: rgba(255, 59, 48, .13);
+  --c-amber: #C08400; --c-violet: #AF52DE; --c-teal: #1A8FA6; --c-rose: #FF2D55; --c-rest: #C7C7CC;
+  --material: rgba(249, 249, 249, .8);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --radius: 12px;
+  --spring: cubic-bezier(.32, .72, 0, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1C1C1E; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .36);
+    --ink: #FFFFFF; --muted: rgba(235, 235, 245, .6); --sep: rgba(84, 84, 88, .65);
+    --tint: #0A84FF; --tint-on-fill: #64B5FF; --tint-fill: #0071E3;
+    --fuel: #FF9F0A; --fuel-ink: #FF9F0A; --fuel-soft: rgba(255, 159, 10, .2);
+    --train: #30D158; --train-ink: #30D158; --train-soft: rgba(48, 209, 88, .2);
+    --over: #FF453A; --over-soft: rgba(255, 69, 58, .2);
+    --c-amber: #FFD60A; --c-violet: #BF5AF2; --c-teal: #40C8E0; --c-rose: #FF375F; --c-rest: #48484A;
+    --material: rgba(29, 29, 31, .78);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1C1C1E; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .36);
+  --ink: #FFFFFF; --muted: rgba(235, 235, 245, .6); --sep: rgba(84, 84, 88, .65);
+  --tint: #0A84FF; --tint-on-fill: #64B5FF; --tint-fill: #0071E3;
+  --fuel: #FF9F0A; --fuel-ink: #FF9F0A; --fuel-soft: rgba(255, 159, 10, .2);
+  --train: #30D158; --train-ink: #30D158; --train-soft: rgba(48, 209, 88, .2);
+  --over: #FF453A; --over-soft: rgba(255, 69, 58, .2);
+  --c-amber: #FFD60A; --c-violet: #BF5AF2; --c-teal: #40C8E0; --c-rose: #FF375F; --c-rest: #48484A;
+  --material: rgba(29, 29, 31, .78);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 17px/1.3 var(--font); letter-spacing: -.01em;
+  -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+}
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.col { max-width: 600px; margin-inline: auto; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; -webkit-user-select: none; user-select: none; }
+:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; border-radius: 8px; }
+.num { font-family: var(--font-round); font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.i { width: 22px; height: 22px; flex: none; }
+.i.sm { width: 14px; height: 14px; }
+
+/* Nav bar: plain over the large title, frosted once the title scrolls under it */
+.nav {
+  position: sticky; top: 0; z-index: 5;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bg); border-bottom: .5px solid transparent;
+  transition: background-color .2s, border-color .2s;
+}
+.nav.is-compact {
+  background: var(--material); border-bottom-color: var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+}
+.nav-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 44px; }
+.nav-btn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0;
+  background: none; color: var(--tint);
+}
+.nav-btn:first-child { justify-self: start; margin-left: -12px; }
+.nav-btn:disabled { color: var(--muted); opacity: .4; cursor: default; }
+.nav-right { justify-self: end; display: flex; align-items: center; margin-right: -12px; }
+.today-btn { border: 0; background: none; color: var(--tint); font-size: 17px; height: 44px; padding: 0 6px; }
+.nav-title { font-size: 17px; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.nav.is-compact .nav-title { opacity: 1; }
+.hero { padding: 2px 0 2px; }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.large-title { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: .01em; }
+
+main { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+.stack { display: grid; gap: 26px; }
+.group { display: grid; gap: 8px; }
+.group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 2px; }
+.group-head h2 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: .015em; }
+.aside { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.link { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; padding: 6px 0; color: var(--tint); font-size: 17px; }
+.card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; }
+.banner { margin: 0; padding: 12px 14px; border-radius: var(--radius); font-size: 15px; background: var(--fuel-soft); }
+
+/* Calories: a progress ring with the kcal left beside it */
+.energy { display: grid; gap: 16px; }
+.energy-top { display: flex; align-items: center; gap: 20px; }
+.ring { width: 116px; height: 116px; flex: none; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 14; }
+.ring-track { stroke: var(--fuel-soft); }
+.ring-fill { stroke: var(--fuel); stroke-linecap: round; transition: stroke-dashoffset .7s var(--spring), stroke .2s; }
+.ring-fill.over { stroke: var(--over); }
+.big { display: grid; gap: 2px; min-width: 0; }
+.big .num { font-size: 50px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+.big .unit { font-size: 15px; font-weight: 500; color: var(--muted); }
+.big.is-over .num { color: var(--over); }
+.stats, .macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.stats div, .macros div { min-width: 0; }
+.stats dt, .macros dt { font-size: 13px; font-weight: 500; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--font-round); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats .fuel { color: var(--fuel-ink); }
+.stats .burn { color: var(--train-ink); }
+.macros { border-top: .5px solid var(--sep); padding-top: 12px; }
+.macros dd { margin: 0; font-family: var(--font-round); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.macros dd small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.mini { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--fill-2); overflow: hidden; }
+.mini span { display: block; height: 100%; border-radius: 2px; background: var(--tint); transition: width .5s var(--spring); }
+
+/* Lists inside cards: full-width rows, hairlines inset from the left */
+.list-card { padding: 0; overflow: hidden; }
+.entries { list-style: none; margin: 0; padding: 0; }
+.entries li { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 16px; }
+.entries li + li::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.what { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.what .name { overflow-wrap: anywhere; }
+.what .sub { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.kcal { font-family: var(--font-round); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.del {
+  position: relative; flex: none; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 0;
+  background: var(--fill); color: var(--muted); font-size: 11px; font-weight: 700; display: grid; place-items: center;
+}
+.del::after { content: ""; position: absolute; inset: -9px; }
+.empty { margin: 0; font-size: 15px; color: var(--muted); }
+.tag { color: var(--train-ink); font-weight: 600; }
+.planned { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 30px; border-bottom: .5px solid var(--sep); }
+.planned::before { content: ""; position: absolute; left: 16px; top: 12px; bottom: 12px; width: 4px; border-radius: 2px; background: var(--train); }
+.planned .done { color: var(--train-ink); font-weight: 600; font-size: 15px; white-space: nowrap; }
+.garmin { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 12px 16px; border-top: .5px solid var(--sep); }
+.garmin .status { flex: 1 1 180px; min-width: 0; }
+.garmin-actions { display: flex; gap: 8px; }
+
+/* Buttons */
+.btn {
+  min-height: 50px; padding: 0 18px; border: 0; border-radius: 14px;
+  background: var(--fill); color: var(--tint-on-fill); font-size: 17px; font-weight: 600;
+}
+.btn.primary { background: var(--tint-fill); color: #FFFFFF; }
+.btn.small { min-height: 34px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:active:not(:disabled), .tbtn:active, .link:active, .nav-btn:active:not(:disabled), .today-btn:active, .chip:active { opacity: .55; }
+
+/* Toolbar */
+.toolbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--material); border-top: .5px solid var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+.toolbar .col { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; }
+.tbtn {
+  min-height: 50px; padding: 0 16px; border: 0; border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 17px; font-weight: 600;
+}
+.tbtn.food { background: var(--fuel-soft); color: var(--fuel-ink); }
+.tbtn.train { background: var(--train-soft); color: var(--train-ink); }
+.tbtn.plain { background: var(--fill); color: var(--ink); }
+
+/* Sheets */
+dialog.sheet {
+  border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 600px;
+  max-height: calc(100% - 24px - env(safe-area-inset-top, 0px));
+  border-radius: 14px 14px 0 0; background: var(--surface); color: var(--ink);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+dialog.sheet[open] { animation: sheet-in .4s var(--spring); }
+dialog.sheet::backdrop { background: rgb(0 0 0 / .4); animation: fade-in .3s ease; }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } }
+#sprintSheet { background: var(--bg); }
+.sheet-body {
+  display: grid; gap: 16px;
+  padding-top: 6px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.grabber { width: 36px; height: 5px; margin: 0 auto -4px; border-radius: 3px; background: var(--fill-2); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; }
+.sheet-head h2 { font-size: 20px; font-weight: 700; }
+.close {
+  position: relative; flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--fill); color: var(--muted); display: grid; place-items: center;
+}
+.close::after { content: ""; position: absolute; inset: -7px; }
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+input:not([type="checkbox"]):not([type="file"]), textarea {
+  width: 100%; min-width: 0; border: 0; border-radius: 10px; background: var(--fill);
+  padding: 11px 12px; font-size: 17px; color: var(--ink); -webkit-appearance: none; appearance: none;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
+textarea { resize: vertical; line-height: 1.35; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 auto; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.status { margin: 0; font-size: 15px; color: var(--muted); min-height: 1.2em; }
+.hint { margin: 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.divider { border: 0; border-top: .5px solid var(--sep); margin: 0; }
+.est-list:not(:empty) { background: var(--fill); border-radius: var(--radius); }
+.kcal-edit { display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--muted); }
+.kcal-edit input { width: 5.4em; padding: 7px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  max-width: 100%; padding: 8px 14px; border: 0; border-radius: 999px; background: var(--fill);
+  font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip b { margin-left: 6px; font-weight: 600; color: var(--fuel-ink); }
+details > summary {
+  list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  min-height: 44px; font-size: 17px; color: var(--tint);
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after {
+  content: ""; width: 8px; height: 8px; margin-right: 4px; flex: none;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform .25s var(--spring);
+}
+details[open] > summary::after { transform: rotate(45deg); }
+.switch-group { border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); }
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px;
+  font-size: 17px; font-weight: 400; color: var(--ink);
+}
+.switch-row + .switch-row { border-top: .5px solid var(--sep); }
+.switch {
+  position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px;
+  background: var(--fill-2); -webkit-appearance: none; appearance: none; cursor: pointer; transition: background-color .25s;
+}
+.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #FFFFFF; box-shadow: 0 3px 8px rgba(0, 0, 0, .15), 0 3px 1px rgba(0, 0, 0, .06);
+  transition: transform .25s var(--spring);
+}
+.switch:checked { background: #34C759; }
+.switch:checked::before { transform: translateX(20px); }
+
+/* Week */
+.week-card { display: grid; gap: 10px; padding: 14px 10px 12px; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.wk { border: 0; background: none; padding: 6px 0; display: grid; justify-items: center; gap: 6px; border-radius: 10px; min-width: 0; }
+.wk.is-current { background: var(--fill); }
+.wk-plot { position: relative; width: 16px; height: 96px; border-radius: 8px; background: var(--fill); overflow: hidden; }
+.wk-bar { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px; background: var(--fuel); }
+.wk-bar.over { background: var(--over); }
+.wk-target { position: absolute; left: 0; right: 0; height: 2px; background: var(--ink); opacity: .5; }
+.wk-num { font-family: var(--font-round); font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wk-day { font-size: 13px; font-weight: 600; color: var(--muted); }
+.wk.is-current .wk-day { color: var(--ink); }
+.wk-day.exam, .wk.is-current .wk-day.exam { color: var(--over); }
+.week-avg { padding: 0 6px; }
+
+/* Plan */
+.plan { display: grid; gap: 12px; }
+.plan-head { align-items: center; }
+.plan-head .exam-pill { margin-left: auto; }
+.kicker { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.plan-focus { margin: 0; font-size: 15px; line-height: 1.4; text-wrap: pretty; }
+.exam-pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: var(--over-soft); color: var(--over); font-size: 15px; font-weight: 600; white-space: nowrap;
+}
+.exam-pill .num { font-weight: 700; }
+.exam-pill .i.sm { width: 12px; height: 12px; margin-right: -3px; }
+.nownext { display: grid; gap: 10px; }
+.now { position: relative; display: grid; gap: 4px; padding: 2px 0 2px 14px; }
+.now::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 4px; border-radius: 2px; background: var(--c, var(--sep)); }
+.nn-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nn-label { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.nn-text { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.nn-step { margin: 0; font-size: 15px; color: var(--muted); }
+.nn-step b, .next b { color: var(--ink); font-weight: 600; }
+.next { margin: 0; padding-left: 14px; font-size: 15px; color: var(--muted); overflow-wrap: anywhere; }
+.btn.tick-btn { flex: none; white-space: nowrap; color: var(--ink); }
+.btn.tick-btn[aria-pressed="true"] { background: var(--train-soft); color: var(--train-ink); }
+#planDetails { border-top: .5px solid var(--sep); margin-bottom: -4px; }
+#planDetails > summary { color: var(--ink); gap: 10px; }
+.sum-detail { margin-left: auto; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-detail b { color: var(--ink); font-weight: 600; }
+.blocks { list-style: none; margin: 0 0 4px; padding: 0; }
+.blk { position: relative; display: grid; grid-template-columns: 3.1em minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0 8px 14px; }
+.blk::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 4px; border-radius: 2px; background: var(--c, var(--sep)); }
+.blk + .blk::after { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: .5px solid var(--sep); }
+.blk-time { font-family: var(--font-round); font-size: 15px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.blk-time small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); }
+.blk-text { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.blk.is-study .blk-text, .blk.is-train .blk-text, .blk.is-exam .blk-text { font-weight: 600; }
+.blk.is-exam .blk-text { color: var(--over); }
+.blk.is-rest .blk-text { color: var(--muted); }
+.blk.is-past { opacity: .5; }
+.blk.is-now { margin: 0 -8px; padding-left: 22px; padding-right: 8px; border-radius: 10px; background: var(--fill); }
+.blk.is-now::before { left: 8px; }
+.blk.is-now::after, .blk.is-now + .blk::after { display: none; }
+.tick {
+  position: relative; width: 26px; height: 26px; margin-right: 2px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--c, var(--sep)); background: transparent; color: transparent;
+  display: grid; place-items: center; font-size: 13px; font-weight: 800; line-height: 1;
+  transition: background-color .2s, color .2s;
+}
+.tick::after { content: ""; position: absolute; inset: -9px; }
+.tick[aria-pressed="true"] { background: var(--c); color: #FFFFFF; }
+.tick:disabled { opacity: .35; cursor: default; }
+.plan-extra { display: grid; gap: 6px; margin: 4px 0 8px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.plan-extra p { margin: 0; }
+.plan-extra b { color: var(--ink); font-weight: 600; }
+.plan-extra q { font-style: italic; color: var(--ink); }
+
+/* Plan overview sheet: grouped lists like Settings */
+.sp { display: grid; gap: 6px; }
+.sp h3 { padding: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.sp-card { background: var(--surface); border-radius: var(--radius); }
+.sp-pad { padding: 12px 16px; }
+.sp-foot { padding: 0 4px; }
+.sp-list { list-style: none; margin: 0; padding: 0 16px; }
+.sp-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; }
+.sp-list li + li { border-top: .5px solid var(--sep); }
+.sp-when { font-family: var(--font-round); font-size: 17px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
+.sp-when.soon { color: var(--over); }
+.prog { display: grid; gap: 6px; }
+.prog + .prog { margin-top: 12px; }
+.prog-row { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
+.prog-row .num { color: var(--muted); }
+.prog-bar { height: 6px; border-radius: 3px; background: var(--fill-2); overflow: hidden; }
+.prog-bar span { display: block; height: 100%; border-radius: 3px; background: var(--c); }
+.sp-days { padding: 0 16px; }
+.sp-day {
+  width: 100%; padding: 11px 0; border: 0; background: none; text-align: left;
+  display: grid; grid-template-columns: 4.4em minmax(0, 1fr) auto; gap: 10px; align-items: center;
+}
+.sp-day + .sp-day { border-top: .5px solid var(--sep); }
+.sp-day::after {
+  content: ""; width: 7px; height: 7px; margin-right: 4px;
+  border-right: 2px solid var(--fill-2); border-bottom: 2px solid var(--fill-2); transform: rotate(-45deg);
+}
+.sp-day > b { font-weight: 600; }
+.sp-day > span { font-size: 15px; color: var(--muted); }
+.sp-day .ex { color: var(--over); font-weight: 600; }
+.sp-day.is-current > b { color: var(--tint); }
+.method { margin: 0; list-style: none; display: grid; gap: 8px; }
+.method li { display: grid; grid-template-columns: 4em minmax(0, 1fr); gap: 8px; font-size: 15px; }
+.rules { margin: 0; display: grid; gap: 10px; }
+.rules dt { font-size: 15px; font-weight: 600; }
+.rules dd { margin: 0; font-size: 15px; color: var(--muted); }
+
+/* Toast */
+.toast {
+  position: fixed; z-index: 20; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border-radius: 14px; font-size: 15px;
+  background: rgba(36, 36, 38, .94); color: #FFFFFF; box-shadow: 0 8px 30px rgba(0, 0, 0, .2);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  animation: toast-in .35s var(--spring);
+}
+.toast button { border: 0; background: none; padding: 4px; color: #64B5FF; font-size: 15px; font-weight: 600; }
+@keyframes toast-in { from { transform: translateY(14px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after, ::backdrop { animation: none !important; transition: none !important; }
+}
+</style>
+
+<header class="nav gutter" id="nav">
+  <div class="col nav-inner">
+    <button id="prevDay" class="nav-btn" type="button" aria-label="Previous day"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4.5 7.5 12l7.5 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="nav-title" id="navTitle" aria-hidden="true">Today</span>
+    <div class="nav-right">
+      <button id="dayLabel" class="today-btn" type="button" hidden>Today</button>
+      <button id="nextDay" class="nav-btn" type="button" aria-label="Next day"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="col stack">
+    <div class="hero">
+      <p class="eyebrow" id="dayDate"></p>
+      <h1 class="large-title" id="dayName">Today</h1>
+    </div>
+    <p id="banner" class="banner" role="status" hidden></p>
+
+    <section class="group" id="planCard" aria-labelledby="planHead" hidden>
+      <div class="group-head plan-head"><h2 id="planHead">Plan</h2><button class="exam-pill" id="examPill" type="button" data-open="sprintSheet" hidden></button><button class="link" id="planOverview" type="button" data-open="sprintSheet">Overview<svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      <div class="card plan">
+        <p class="kicker" id="planKicker"></p>
+        <p class="plan-focus" id="planFocus"></p>
+        <div class="nownext" id="nowNext" hidden></div>
+        <details id="planDetails">
+          <summary id="planSummary"><span id="planSumLabel">Whole day</span><span class="sum-detail" id="planStudy"></span></summary>
+          <ol class="blocks" id="planBlocks"></ol>
+          <div class="plan-extra" id="planExtra"></div>
+        </details>
+      </div>
+    </section>
+
+    <section class="group" aria-labelledby="energyHead">
+      <div class="group-head"><h2 id="energyHead">Calories</h2></div>
+      <div class="card energy">
+        <div class="energy-top">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="52"/><circle class="ring-fill" id="ringFill" cx="60" cy="60" r="52"/></svg>
+          <div class="big" id="big"><span class="num" id="left">0</span><span class="unit" id="leftLabel">kcal left</span></div>
+        </div>
+        <dl class="stats">
+          <div><dt>Target</dt><dd id="sTarget">0</dd></div>
+          <div><dt>Eaten</dt><dd id="sEaten" class="fuel">0</dd></div>
+          <div><dt>Training</dt><dd id="sBurned" class="burn">0</dd></div>
+        </dl>
+        <dl class="macros">
+          <div><dt>Protein</dt><dd id="mP">0 <small>g</small></dd></div>
+          <div><dt>Carbs</dt><dd id="mC">0 <small>g</small></dd></div>
+          <div><dt>Fat</dt><dd id="mF">0 <small>g</small></dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="group" aria-labelledby="foodHead">
+      <div class="group-head"><h2 id="foodHead">Food</h2><span class="aside" id="foodSum"></span></div>
+      <div class="card list-card"><ul class="entries" id="foodList"></ul></div>
+    </section>
+
+    <section class="group" aria-labelledby="trainHead">
+      <div class="group-head"><h2 id="trainHead">Training</h2><span class="aside" id="trainSum"></span></div>
+      <div class="card list-card">
+        <div id="trainPlan"></div>
+        <ul class="entries" id="trainList"></ul>
+        <div class="garmin" id="garminRow" hidden>
+          <p class="status" id="garminStatus" role="status"></p>
+          <div class="garmin-actions">
+            <button class="btn small" id="garminAction" type="button" hidden></button>
+            <button class="btn small" id="syncBtn" type="button">Sync Garmin</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group" aria-labelledby="weekHead">
+      <div class="group-head"><h2 id="weekHead">Last 7 days</h2></div>
+      <div class="card week-card"><div class="week" id="week"></div><p class="hint week-avg" id="weekAvg"></p></div>
+    </section>
+  </div>
+</main>
+
+<nav class="toolbar gutter" aria-label="Add entries">
+  <div class="col">
+    <button class="tbtn food" type="button" data-open="foodSheet" aria-label="Add food"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Food</button>
+    <button class="tbtn train" type="button" data-open="trainSheet" aria-label="Add training"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Training</button>
+    <button class="tbtn plain" type="button" data-open="setSheet" aria-label="Daily target">Target</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden><span id="toastMsg"></span><button id="toastUndo" type="button" hidden>Undo</button></div>
+
+<dialog class="sheet" id="foodSheet" aria-labelledby="foodSheetTitle">
+  <div class="sheet-body">
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="foodSheetTitle">Add food</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
+
+    <div id="estimateBlock" style="display:grid;gap:12px">
+      <label for="describe">Describe what you ate
+        <textarea id="describe" rows="2" placeholder="2 scrambled eggs, 2 slices of toast with butter, a flat white"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn primary" id="estimateBtn" type="button">Estimate calories</button>
+        <button class="btn" id="photoBtn" type="button" hidden>Use a photo</button>
+        <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+      <p class="status" id="estStatus" role="status"></p>
+      <ul class="entries est-list" id="estList"></ul>
+      <button class="btn primary" id="addEstBtn" type="button" hidden>Add</button>
+    </div>
+
+    <div id="recentBlock" class="sp" hidden>
+      <h3>Recent</h3>
+      <div class="chips" id="recent"></div>
+    </div>
+
+    <hr class="divider">
+    <details id="manual">
+      <summary>Enter it yourself</summary>
+      <form id="manualForm" style="display:grid;gap:12px">
+        <label for="mName">Food<input id="mName" required autocomplete="off" placeholder="Chicken salad"></label>
+        <div class="grid4">
+          <label for="mKcal">kcal<input id="mKcal" type="number" inputmode="numeric" min="0" required></label>
+          <label for="mProt">Protein g<input id="mProt" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label for="mCarb">Carbs g<input id="mCarb" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label for="mFat">Fat g<input id="mFat" type="number" inputmode="decimal" min="0" step="any"></label>
+        </div>
+        <button class="btn primary" type="submit">Add food</button>
+      </form>
+    </details>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="trainSheet" aria-labelledby="trainSheetTitle">
+  <form class="sheet-body" id="trainForm">
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="trainSheetTitle">Add training</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
+    <label for="wName">Activity<input id="wName" list="workTypes" required autocomplete="off" placeholder="Run"></label>
+    <datalist id="workTypes"><option value="Run"></option><option value="Strength"></option><option value="Cycle"></option><option value="Walk"></option><option value="Swim"></option><option value="HIIT"></option><option value="Yoga"></option></datalist>
+    <div class="grid2">
+      <label for="wMin">Minutes<input id="wMin" type="number" inputmode="numeric" min="0"></label>
+      <label for="wKcal">Calories burned<input id="wKcal" type="number" inputmode="numeric" min="0" required></label>
+    </div>
+    <label for="wNotes">Notes<input id="wNotes" autocomplete="off" placeholder="5 x 5 squat at 80 kg"></label>
+    <p class="hint">Garmin workouts arrive by themselves when you tap Sync Garmin. For anything else, enter the calories here.</p>
+    <button class="btn primary" type="submit">Add training</button>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="setSheet" aria-labelledby="setSheetTitle">
+  <form class="sheet-body" id="setForm">
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="setSheetTitle">Daily target</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
+    <label for="target">Calories per day<input id="target" type="number" inputmode="numeric" min="800" max="6000" required></label>
+    <div class="switch-group">
+      <label class="switch-row" for="addBack"><span>Add training calories to my target</span><input id="addBack" class="switch" type="checkbox"></label>
+      <label class="switch-row" for="planTargets" id="planTargetsRow" hidden><span>Follow the plan's targets on plan days</span><input id="planTargets" class="switch" type="checkbox"></label>
+    </div>
+    <p class="hint" id="planHint" hidden></p>
+    <p class="hint">Garmin workouts count their active calories, so your resting burn isn't counted twice. Your log saves to your Claude account and only you can see it.</p>
+    <button class="btn primary" type="submit">Save</button>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="sprintSheet" aria-labelledby="sprintTitle">
+  <div class="sheet-body">
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="sprintTitle">Plan</h2><button class="close" type="button" data-close aria-label="Close"><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button></div>
+    <div id="sprintBody" style="display:grid;gap:22px"></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const nf = new Intl.NumberFormat();
+  const fmt = (n) => nf.format(Math.round(n || 0));
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const z = (n) => String(n).padStart(2, "0");
+  const keyOf = (d) => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+  const fromKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+  const shift = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+  const newId = () => Math.random().toString(36).slice(2, 10);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const today = () => keyOf(new Date());
+  const WINDOW = 120;
+  const nf1 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+  const toMin = (hm) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hm || "")); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
+  const dur = (m) => { m = Math.max(1, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; };
+  const hrs = (m) => `${nf1.format(m / 60)} h`;
+  const CHEV = '<svg class="i sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5 16.5 12 9 19.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const shortDate = (k) => fromKey(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+
+  const S = {
+    mode: "loading",          // loading | live | local | private
+    slow: false, dbError: null,
+    db: null, daysCol: null, meta: null, sample: null,
+    settings: { target: 2200, addBack: true, planTargets: true },
+    days: new Map(),          // from the live subscription (newest WINDOW days)
+    extra: new Map(),         // older days fetched on demand, plus this view's own writes
+    plan: { meta: null, days: new Map() },  // the exam sprint: meta/plan and plan/<date>
+    current: today(),
+    follow: true,             // the view is on today, so it moves on at midnight
+    est: [],
+  };
+
+  // ---------- reading ----------
+  const dayView = (k) => S.days.get(k) || S.extra.get(k) || { date: k, food: [], workouts: [] };
+  const getDay = (k) => {
+    const d = JSON.parse(JSON.stringify(dayView(k)));
+    d.date = k; d.food = Array.isArray(d.food) ? d.food : []; d.workouts = Array.isArray(d.workouts) ? d.workouts : [];
+    return d;
+  };
+  const sum = (arr, f) => (Array.isArray(arr) ? arr : []).reduce((t, x) => t + num(x && x[f]), 0);
+  function totals(k) {
+    const d = dayView(k);
+    const eaten = sum(d.food, "kcal"), burned = sum(d.workouts, "kcal");
+    const fuel = planFuel(k);
+    // A plan day's target already allows for training, so workouts are only added on other days.
+    const target = fuel ? fuel.kcal : (num(S.settings.target) || 2200);
+    const budget = target + (!fuel && S.settings.addBack ? burned : 0);
+    return { eaten, burned, target, budget, left: budget - eaten, p: sum(d.food, "p"), c: sum(d.food, "c"), f: sum(d.food, "f"), protein: fuel ? fuel.protein : 0, food: d.food || [], workouts: d.workouts || [] };
+  }
+
+  // ---------- plan: the exam sprint timetable, saved in the private log ----------
+  const SUBJECT_COLORS = ["amber", "violet", "teal", "rose"];
+  const planDay = (k) => S.plan.days.get(k) || null;
+  const blocksOf = (pd) => (pd && Array.isArray(pd.blocks) ? pd.blocks : []).filter((b) => b && toMin(b.s) != null && typeof b.t === "string");
+  const blockMins = (b) => { const s = toMin(b.s), e = toMin(b.e); return e != null && e > s ? e - s : 0; };
+  const isStudy = (b) => b.c === "study";
+  function subjectColor(code) {
+    const list = S.plan.meta && Array.isArray(S.plan.meta.subjects) ? S.plan.meta.subjects : [];
+    const i = list.findIndex((x) => x && x.code === code);
+    if (i >= 0 && SUBJECT_COLORS.includes(list[i].color)) return `var(--c-${list[i].color})`;
+    let h = 0; for (const ch of String(code || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `var(--c-${SUBJECT_COLORS[(i >= 0 ? i : h) % SUBJECT_COLORS.length]})`;
+  }
+  const catColor = (b) => b.c === "study" ? subjectColor(b.subject) : b.c === "train" ? "var(--train)" : b.c === "exam" ? "var(--over)" : b.c === "routine" ? "var(--muted)" : "var(--c-rest)";
+  const catName = (b) => b.c === "study" ? (b.subject || "Study") : ({ train: "Training", exam: "Exam", routine: "Routine", rest: "Rest or free time" })[b.c] || "";
+  const lastDay = () => { let last = today(); for (const k of S.plan.days.keys()) if (k > last) last = k; return last; };
+  const examsList = () => (S.plan.meta && Array.isArray(S.plan.meta.exams) ? S.plan.meta.exams : [])
+    .filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && toMin(x.start) != null)
+    .slice().sort((a, b) => (a.date + a.start < b.date + b.start ? -1 : 1));
+  const examOn = (k) => examsList().find((x) => x.date === k) || null;
+
+  function planFuel(k) {
+    const pd = planDay(k), meta = S.plan.meta;
+    if (!pd || !meta || S.settings.planTargets === false) return null;
+    const kc = meta.kcal || {}, trained = (dayView(k).workouts || []).length > 0;
+    const type = pd.fuel === "rest" || (pd.fuel === "optional" && !trained) ? "rest" : "training";
+    const kcal = num(kc[type]);
+    return kcal ? { kcal, type, optional: pd.fuel === "optional", protein: num(meta.protein) } : null;
+  }
+
+  // Where an exam stands from right now.
+  function examStatus(x) {
+    const t = today(), nm = nowMin(), s = toMin(x.start), e = toMin(x.end);
+    if (x.date < t || (x.date === t && e != null && nm >= e)) return { state: "done", text: "Done" };
+    if (x.date === t && nm >= s) return { state: "now", text: e != null ? `Now, until ${x.end}` : "Now" };
+    if (x.date === t) return { state: "soon", text: `In ${dur(s - nm)}` };
+    const days = Math.round((fromKey(x.date) - fromKey(t)) / 86400000);
+    return { state: days === 1 ? "soon" : "later", text: days === 1 ? "Tomorrow" : `${days} days` };
+  }
+
+  // Which step of the 90-minute method a study block is on.
+  function methodStep(b, nm) {
+    const m = S.plan.meta && S.plan.meta.method, steps = m && Array.isArray(m.steps) ? m.steps : [];
+    const total = steps.reduce((t, x) => t + num(x && x.min), 0);
+    if (!total || blockMins(b) !== total) return "";
+    let at = toMin(b.s);
+    for (let i = 0; i < steps.length; i++) {
+      const end = at + num(steps[i].min);
+      if (nm < end) return `<p class="nn-step"><b>Step ${i + 1} of ${steps.length}</b>, until ${z(Math.floor(end / 60))}:${z(end % 60)}: ${esc(steps[i].t)}</p>`;
+      at = end;
+    }
+    return "";
+  }
+
+  function renderPlan() {
+    const k = S.current, pd = planDay(k);
+    $("planCard").hidden = !pd;
+    if (!pd) return;
+    const meta = S.plan.meta || {}, t = today(), isToday = k === t, future = k > t;
+    const blocks = blocksOf(pd), nm = nowMin();
+    const studied = new Set(Array.isArray(dayView(k).studied) ? dayView(k).studied : []);
+    const act = document.activeElement;  // re-rendering replaces the tick buttons, so keep keyboard focus on the same one
+    const keep = act && act.dataset && act.dataset.tick != null ? { key: act.dataset.tick, inNow: !!act.closest("#nowNext") } : null;
+
+    const kind = examOn(k) ? "Exam day" : pd.fuel === "rest" ? "Rest day" : pd.fuel === "optional" ? "Run optional" : "Training day";
+    $("planKicker").textContent = [pd.day && pd.of ? `Day ${pd.day} of ${pd.of}` : meta.name || "Plan", kind].join(" · ");
+    $("planFocus").textContent = pd.focus || "";
+    $("planFocus").hidden = !pd.focus;
+
+    // This day's own exam until it's over, otherwise the next one still to come.
+    const own = examOn(k);
+    const ex = own && examStatus(own).state !== "done" ? own : examsList().find((x) => examStatus(x).state !== "done");
+    $("examPill").hidden = !ex;
+    $("planOverview").hidden = !!ex;  // the pill opens the overview while an exam is still to come
+    if (ex) {
+      const st = examStatus(ex);
+      $("examPill").innerHTML = `${esc(ex.code)} · <span class="num">${esc(st.text)}</span>${CHEV}`;
+      $("examPill").setAttribute("aria-label", `${ex.code} exam, ${fromKey(ex.date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} at ${ex.start}${ex.venue ? `, ${ex.venue}` : ""}: ${st.text}. Open the plan overview.`);
+    }
+
+    // Now and next, on today only.
+    let cur = null, next = null;
+    if (isToday) for (const b of blocks) {
+      const s = toMin(b.s), e = toMin(b.e);
+      if (s <= nm && (e == null || nm < e)) cur = b;
+      if (s > nm && !next) next = b;
+    }
+    let nn = "";
+    if (cur) {
+      const e = toMin(cur.e), study = isStudy(cur), on = study && studied.has(cur.s);
+      nn += `<div class="now" style="--c:${catColor(cur)}">
+        <div class="nn-row"><p class="nn-label">${e != null ? `Now · ${esc(dur(e - nm))} left` : `Since ${esc(cur.s)}`}</p>
+        ${study ? `<button class="btn small tick-btn" type="button" data-tick="${esc(cur.s)}" aria-pressed="${on}">${on ? "Done ✓" : "Mark done"}</button>` : ""}</div>
+        <p class="nn-text">${esc(cur.t)}</p>${study ? methodStep(cur, nm) : ""}</div>`;
+    }
+    if (next) nn += `<p class="next"><b>Next ${esc(next.s)}</b>${cur ? "" : `, in ${esc(dur(toMin(next.s) - nm))}`} · ${esc(next.t)}</p>`;
+    else if (isToday) {
+      const first = blocksOf(planDay(shift(k, 1)))[0];
+      if (first) nn += `<p class="next"><b>Tomorrow ${esc(first.s)}</b> · ${esc(first.t)}</p>`;
+    }
+    $("nowNext").innerHTML = nn;
+    $("nowNext").hidden = !nn;
+
+    $("planSumLabel").textContent = "Whole day";
+    $("planBlocks").innerHTML = blocks.map((b) => {
+      const s = toMin(b.s), e = toMin(b.e), now = cur === b;
+      const past = isToday && !now && (e != null ? e <= nm : s <= nm);
+      const study = isStudy(b), on = study && studied.has(b.s);
+      return `<li class="blk is-${esc(b.c)}${now ? " is-now" : ""}${past ? " is-past" : ""}" style="--c:${catColor(b)}">
+        <span class="blk-time num">${esc(b.s)}${b.e ? `<small>${esc(b.e)}</small>` : ""}</span>
+        <span class="blk-text">${esc(b.t)}<span class="sr">. ${esc(catName(b))}${now ? ", happening now" : ""}</span></span>
+        ${study ? `<button class="tick" type="button" data-tick="${esc(b.s)}" aria-pressed="${on}" aria-label="Done: ${esc(b.t)}"${future ? " disabled" : ""}>✓</button>` : "<span></span>"}</li>`;
+    }).join("");
+
+    const extra = [];
+    if (pd.map && pd.map.content) extra.push(`<p><b>${esc(pd.map.subject || "Today")}:</b> ${esc(pd.map.content)}${pd.map.use ? `. Use: ${esc(pd.map.use)}` : ""}.</p>`);
+    if (pd.quote) extra.push(`<p><q>${esc(pd.quote)}</q>${pd.quoteBy ? ` · ${esc(pd.quoteBy)}` : ""}</p>`);
+    $("planExtra").innerHTML = extra.join("");
+
+    const sb = blocks.filter(isStudy);
+    const planned = sb.reduce((n, b) => n + blockMins(b), 0), done = sb.filter((b) => studied.has(b.s)).reduce((n, b) => n + blockMins(b), 0);
+    const short = planned < 60;  // a lone 15-minute review reads better in minutes
+    $("planStudy").innerHTML = sb.length ? `<b>${esc(short ? fmt(done) : nf1.format(done / 60))}</b> of ${esc(short ? `${fmt(planned)} min` : hrs(planned))} studied` : `${blocks.length} blocks`;
+    if (keep) { const again = (keep.inNow ? $("nowNext") : $("planBlocks")).querySelector(`[data-tick="${CSS.escape(keep.key)}"]`); if (again) again.focus(); }
+  }
+
+  // Planned training sits above the Training log; a logged or synced workout marks it done.
+  function renderTrainPlan(k, t) {
+    const tb = blocksOf(planDay(k)).filter((b) => b.c === "train");
+    const done = t.workouts.length > 0, future = k > today();
+    $("trainPlan").innerHTML = tb.map((b) => `<div class="planned"><div class="what"><span class="sub">Planned · ${esc(b.s)}${b.e ? `–${esc(b.e)}` : ""}</span><span class="name">${esc(b.t)}</span></div>
+      ${done ? `<span class="done">Done ✓</span>` : future ? "" : G.ready ? `<span class="sub">Syncs from Garmin</span>` : `<button class="btn small" type="button" data-plan-train="${esc(b.s)}">Log it</button>`}</div>`).join("");
+  }
+
+  function renderSprint() {
+    const meta = S.plan.meta || {}, exams = examsList();
+    const days = [...S.plan.days.values()].filter((d) => d && d.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const out = [];
+    if (exams.length) out.push(`<section class="sp"><h3>Exams</h3><ul class="sp-list sp-card">${exams.map((x) => {
+      const st = examStatus(x);
+      return `<li><div class="what"><span class="name"><b>${esc(x.code)}</b></span><span class="sub">${esc(shortDate(x.date))}, ${esc(x.start)}${x.end ? `–${esc(x.end)}` : ""}${x.venue ? ` · ${esc(x.venue)}` : ""}</span></div><span class="sp-when${st.state === "soon" || st.state === "now" ? " soon" : ""}">${esc(st.text)}</span></li>`;
+    }).join("")}</ul></section>`);
+
+    const tot = new Map();
+    for (const d of days) {
+      const st = new Set(Array.isArray(dayView(d.date).studied) ? dayView(d.date).studied : []);
+      for (const b of blocksOf(d)) if (isStudy(b)) {
+        const r = tot.get(b.subject) || { planned: 0, done: 0 };
+        r.planned += blockMins(b); if (st.has(b.s)) r.done += blockMins(b);
+        tot.set(b.subject, r);
+      }
+    }
+    if (tot.size) {
+      const order = (code) => { const i = exams.findIndex((x) => x.code === code); return i < 0 ? 99 : i; };
+      const rows = [...tot.entries()].sort((a, b) => order(a[0]) - order(b[0]));
+      const all = rows.reduce((a, [, r]) => ({ planned: a.planned + r.planned, done: a.done + r.done }), { planned: 0, done: 0 });
+      out.push(`<section class="sp"><h3>Study done</h3><div class="sp-card sp-pad">${rows.map(([code, r]) => `<div class="prog" style="--c:${subjectColor(code)}"><div class="prog-row"><span>${esc(code)}</span><span class="num">${esc(hrs(r.done))} of ${esc(hrs(r.planned))}</span></div><div class="prog-bar"><span style="width:${r.planned ? Math.min(100, r.done / r.planned * 100) : 0}%"></span></div></div>`).join("")}</div>
+        <p class="hint sp-foot">${esc(hrs(all.done))} of ${esc(hrs(all.planned))} in total. Tick each study block in the day's plan when you finish it.</p></section>`);
+    }
+    if (days.length) out.push(`<section class="sp"><h3>Days</h3><div class="sp-card sp-days">${days.map((d) => {
+      const ex = examOn(d.date);
+      return `<button class="sp-day${d.date === S.current ? " is-current" : ""}" type="button" data-plan-day="${esc(d.date)}"><b>${esc(fromKey(d.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" }))}</b><span>${ex ? `<span class="ex">${esc(ex.code)} exam.</span> ` : ""}${esc(d.focus || "")}</span></button>`;
+    }).join("")}</div></section>`);
+    const m = meta.method;
+    if (m && Array.isArray(m.steps) && m.steps.length) out.push(`<section class="sp"><h3>${esc(m.title || "Study method")}</h3><ol class="method sp-card sp-pad">${m.steps.map((s) => `<li><b class="num">${fmt(s.min)} min</b><span>${esc(s.t)}</span></li>`).join("")}</ol>${m.rule ? `<p class="hint sp-foot">${esc(m.rule)}</p>` : ""}</section>`);
+    const dl = (title, list) => Array.isArray(list) && list.length ? `<section class="sp"><h3>${title}</h3><dl class="rules sp-card sp-pad">${list.map((r) => `<div><dt>${esc(r && r.h)}</dt><dd>${esc(r && r.t)}</dd></div>`).join("")}</dl></section>` : "";
+    out.push(dl("Rules that don't move", meta.rules), dl("After the sprint", meta.after));
+    if (meta.note) out.push(`<p class="hint sp-foot">${esc(meta.note)}</p>`);
+    $("sprintTitle").textContent = meta.name || "Plan";
+    $("sprintBody").innerHTML = out.join("") || `<p class="hint">No plan is saved yet.</p>`;
+  }
+
+  // ---------- writing ----------
+  let chain = Promise.resolve();
+  function queue(write, failMsg) {
+    chain = chain.then(write).catch((err) => {
+      if (err && err.code === "invalid_argument") { S.mode = "private"; render(); return; }
+      toast(err && err.code === "quota_exceeded" ? "Your log is full. Remove some old entries to add more." : failMsg);
+    });
+  }
+  function saveDay(k, day) {
+    S.extra.set(k, day);
+    if (S.days.has(k) || S.mode !== "live") S.days.set(k, day);
+    render();
+    if (S.mode === "live") queue(() => S.daysCol.doc(k).set(day), "Couldn't save that change. Check your connection and try again.");
+  }
+  function addFood(items) {
+    const d = getDay(S.current);
+    const before = getDay(S.current);
+    for (const it of items) d.food.push({ id: newId(), name: it.name, portion: it.portion || "", kcal: Math.round(num(it.kcal)), p: Math.round(num(it.p)), c: Math.round(num(it.c)), f: Math.round(num(it.f)), at: Date.now() });
+    saveDay(S.current, d);
+    const k = S.current;
+    toast(items.length === 1 ? `Added ${items[0].name}` : `Added ${items.length} items`, () => saveDay(k, before));
+  }
+
+  // ---------- rendering ----------
+  function dayWords(k) {
+    const t = today(), d = fromKey(k);
+    const rel = k === t ? "Today" : k === shift(t, -1) ? "Yesterday" : k === shift(t, 1) ? "Tomorrow" : "";
+    const year = d.getFullYear() === new Date().getFullYear() ? undefined : "numeric";
+    return {
+      name: rel || d.toLocaleDateString(undefined, { weekday: "long" }),
+      date: d.toLocaleDateString(undefined, rel ? { weekday: "long", day: "numeric", month: "long", year } : { day: "numeric", month: "long", year }),
+      short: rel || d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+    };
+  }
+
+  const RING = 2 * Math.PI * 52;
+  function render() {
+    const k = S.current, w = dayWords(k);
+    $("dayName").textContent = w.name;
+    $("dayDate").textContent = w.date;
+    $("navTitle").textContent = w.short;
+    $("dayLabel").hidden = k === today();
+    $("nextDay").disabled = k >= lastDay();
+
+    const t = totals(k);
+    const over = t.left < 0;
+    $("left").textContent = fmt(Math.abs(t.left));
+    $("leftLabel").textContent = over ? "kcal over target" : "kcal left";
+    $("big").classList.toggle("is-over", over);
+    $("sTarget").textContent = fmt(t.budget);
+    $("sEaten").textContent = fmt(t.eaten);
+    $("sBurned").textContent = fmt(t.burned);
+    $("mP").innerHTML = t.protein
+      ? `${fmt(t.p)} <small>/ ${fmt(t.protein)} g</small><span class="mini"><span style="width:${Math.min(100, t.p / t.protein * 100)}%"></span></span>`
+      : `${fmt(t.p)} <small>g</small>`;
+    $("mC").innerHTML = `${fmt(t.c)} <small>g</small>`;
+    $("mF").innerHTML = `${fmt(t.f)} <small>g</small>`;
+
+    // The ring fills as you eat; it turns red once you pass the target.
+    const ring = $("ringFill"), share = t.budget > 0 ? Math.min(1, t.eaten / t.budget) : (t.eaten > 0 ? 1 : 0);
+    ring.style.strokeDasharray = `${RING}`;
+    ring.style.strokeDashoffset = `${RING * (1 - share)}`;
+    ring.style.opacity = t.eaten > 0 ? "1" : "0";
+    ring.classList.toggle("over", over);
+
+    $("foodSum").textContent = t.food.length ? `${fmt(t.eaten)} kcal` : "";
+    $("foodList").innerHTML = t.food.length ? t.food.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${[x.portion, (x.p || x.c || x.f) ? `P ${fmt(x.p)} · C ${fmt(x.c)} · F ${fmt(x.f)}` : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
+      <span class="kcal">${fmt(x.kcal)}</span><button class="del" data-del="food" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("")
+      : `<li><p class="empty">Nothing logged for this day. Tap + Food and describe what you ate.</p></li>`;
+
+    $("trainSum").textContent = t.workouts.length ? `${fmt(t.burned)} kcal` : "";
+    $("trainList").innerHTML = t.workouts.length ? t.workouts.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${[x.minutes ? `${fmt(x.minutes)} min` : "", x.notes || ""].filter(Boolean).map(esc).join(" · ")}${x.source === "garmin" ? `${x.minutes || x.notes ? " · " : ""}<span class="tag">Garmin</span>` : ""}</span></div>
+      <span class="kcal">${fmt(x.kcal)}</span><button class="del" data-del="workouts" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("")
+      : `<li><p class="empty">${S.mcp ? "No training logged. Tap Sync Garmin to pull in your workouts, or + Training to add one." : "No training logged. Tap + Training to add a workout."}</p></li>`;
+
+    renderPlan();
+    renderTrainPlan(k, t);
+    renderWeek();
+    renderBanner();
+  }
+
+  function renderWeek() {
+    const keys = Array.from({ length: 7 }, (_, i) => shift(S.current, i - 6));
+    const data = keys.map((k) => ({ k, ...totals(k) }));
+    const max = Math.max(1, ...data.map((d) => Math.max(d.eaten, d.budget)));
+    $("week").innerHTML = data.map((d) => {
+      const label = fromKey(d.k).toLocaleDateString(undefined, { weekday: "narrow" });
+      const long = fromKey(d.k).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+      const ex = examOn(d.k);
+      return `<button class="wk${d.k === S.current ? " is-current" : ""}" data-goto="${d.k}" aria-label="${esc(long)}${ex ? `, ${esc(ex.code)} exam` : ""}: ate ${fmt(d.eaten)} of ${fmt(d.budget)} kcal">
+        <span class="wk-plot"><span class="wk-bar${d.eaten > d.budget ? " over" : ""}" style="height:${d.eaten / max * 100}%"></span><span class="wk-target" style="bottom:calc(${d.budget / max * 100}% - 1px)"></span></span>
+        <span class="wk-num">${d.eaten ? fmt(d.eaten) : "–"}</span><span class="wk-day${ex ? " exam" : ""}">${esc(label)}</span></button>`;
+    }).join("");
+    const logged = data.filter((d) => d.eaten > 0);
+    $("weekAvg").textContent = logged.length ? `Average ${fmt(sum(logged, "eaten") / logged.length)} kcal eaten on ${logged.length} logged day${logged.length === 1 ? "" : "s"}` : "Bars show calories eaten; the line is your target.";
+  }
+
+  function renderBanner() {
+    const msg =
+      S.mode === "local" ? "This is a preview. Open Fuel Log from your Claude account to save what you log." :
+      S.mode === "private" ? "This log is private to its owner, so nothing you add here is saved." :
+      S.dbError ? "Lost the connection to your saved log. Reload the page to reconnect." :
+      S.slow ? "Can't reach your saved log yet. Entries may not save until the connection is back." : "";
+    $("banner").textContent = msg;
+    $("banner").hidden = !msg;
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null, undoFn = null;
+  function toast(msg, undo) {
+    $("toastMsg").textContent = msg;
+    undoFn = undo || null;
+    $("toastUndo").hidden = !undo;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; undoFn = null; }, 5000);
+  }
+  $("toastUndo").addEventListener("click", () => { const f = undoFn; undoFn = null; $("toast").hidden = true; if (f) f(); });
+
+  // ---------- navigation ----------
+  function goTo(k) {
+    if (k > lastDay()) k = lastDay();
+    if (k !== S.current) $("planDetails").open = k > today();
+    S.current = k; S.follow = k === today();
+    render(); ensureDay(k);
+    if (G.ready && k <= today() && !G.synced.has(k)) syncGarmin(rangeFor(k), false);
+  }
+  // Keep "now" current, and move on to the new day at midnight if the view was on today.
+  function tick() {
+    if (document.hidden) return;
+    if (S.follow && S.current !== today()) goTo(today()); else renderPlan();
+  }
+  setInterval(tick, 30000);
+  document.addEventListener("visibilitychange", tick);
+  $("prevDay").addEventListener("click", () => goTo(shift(S.current, -1)));
+  $("nextDay").addEventListener("click", () => goTo(shift(S.current, 1)));
+  $("dayLabel").addEventListener("click", () => goTo(today()));
+  $("week").addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (b) goTo(b.dataset.goto); });
+
+  async function ensureDay(k) {
+    if (S.mode !== "live" || S.days.has(k) || S.extra.has(k) || S.days.size < WINDOW) return;
+    const oldest = [...S.days.keys()].sort()[0];
+    if (oldest && k >= oldest) return;
+    try { const s = await S.daysCol.doc(k).get(); if (s.exists) { S.extra.set(k, s.data()); render(); } } catch (_) { /* shown as empty */ }
+  }
+
+  // ---------- delete with undo ----------
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del]");
+    if (!b) return;
+    const k = S.current, before = getDay(k), after = getDay(k), list = b.dataset.del;
+    const item = after[list].find((x) => x.id === b.dataset.id);
+    after[list] = after[list].filter((x) => x.id !== b.dataset.id);
+    if (item && item.source === "garmin") after.dismissed = (Array.isArray(after.dismissed) ? after.dismissed : []).concat(item.id);
+    saveDay(k, after);
+    toast(`Removed ${item ? item.name : "entry"}`, () => saveDay(k, before));
+  });
+
+  // ---------- plan: tick study blocks, jump to days, log planned training ----------
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tick]");
+    if (!b || b.disabled || S.current > today()) return;
+    const k = S.current, d = getDay(k), key = b.dataset.tick;
+    const set = new Set(Array.isArray(d.studied) ? d.studied : []);
+    if (set.has(key)) set.delete(key); else set.add(key);
+    d.studied = [...set].sort();
+    b.focus();
+    saveDay(k, d);
+  });
+  $("sprintBody").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-plan-day]"); if (!b) return;
+    $("sprintSheet").close(); goTo(b.dataset.planDay); window.scrollTo({ top: 0 });
+  });
+  $("trainPlan").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-plan-train]"); if (!b) return;
+    const blk = blocksOf(planDay(S.current)).find((x) => x.c === "train" && x.s === b.dataset.planTrain); if (!blk) return;
+    const name = blk.t.split(/[,(.]/)[0].replace(/^optional\s+/i, "").trim();
+    $("wName").value = name.charAt(0).toUpperCase() + name.slice(1);
+    $("wMin").value = blockMins(blk) || "";
+    $("wKcal").value = ""; $("wNotes").value = "";
+    openSheet("trainSheet");
+    $("wKcal").focus();
+  });
+
+  // ---------- sheets ----------
+  function openSheet(id) {
+    const when = S.current === today() ? "" : ` · ${shortDate(S.current)}`;
+    if (id === "setSheet") {
+      $("target").value = S.settings.target; $("addBack").checked = !!S.settings.addBack;
+      const m = S.plan.meta, kc = (m && m.kcal) || {};
+      $("planTargetsRow").hidden = !m; $("planHint").hidden = !m;
+      $("planTargets").checked = S.settings.planTargets !== false;
+      if (m) $("planHint").textContent = `On ${m.name ? m.name.toLowerCase() : "plan"} days the target is ${fmt(kc.training)} kcal on training days and ${fmt(kc.rest)} kcal on rest days, with ${fmt(m.protein)} g protein. Those numbers already allow for training, so workouts aren't added on top. On a day where the run is optional, the training target applies once a workout is logged. The two settings above apply on every other day.`;
+    }
+    if (id === "foodSheet") { renderRecent(); $("foodSheetTitle").textContent = `Add food${when}`; }
+    if (id === "trainSheet") $("trainSheetTitle").textContent = `Add training${when}`;
+    if (id === "sprintSheet") renderSprint();
+    $(id).showModal();
+  }
+  document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openSheet(b.dataset.open)));
+  document.querySelectorAll("dialog.sheet").forEach((d) => {
+    d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
+    d.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => d.close()));
+    // Drag the top of a sheet down to close it, as on iPhone.
+    let y0 = null, dy = 0;
+    d.addEventListener("touchstart", (e) => {
+      if (d.scrollTop > 0 || !e.target.closest(".grabber, .sheet-head") || e.target.closest("button")) return;
+      y0 = e.touches[0].clientY; dy = 0; d.style.transition = "none";
+    }, { passive: true });
+    d.addEventListener("touchmove", (e) => {
+      if (y0 == null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0); d.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    d.addEventListener("touchend", () => {
+      if (y0 == null) return;
+      y0 = null; d.style.transition = "transform .25s cubic-bezier(.32, .72, 0, 1)";
+      if (dy > 90) { d.style.transform = "translateY(100%)"; setTimeout(() => { d.close(); d.style.transform = ""; d.style.transition = ""; }, 220); }
+      else d.style.transform = "";
+    });
+  });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => $("nav").classList.toggle("is-compact", !e.isIntersecting), { rootMargin: "-48px 0px 0px 0px" }).observe($("dayName"));
+  }
+
+  // Recent foods: tap to log again
+  let recentItems = [];
+  function renderRecent() {
+    const seen = new Set(); recentItems = [];
+    const keys = [...new Set([...S.days.keys(), ...S.extra.keys()])].sort().reverse();
+    for (const k of keys) {
+      const food = (dayView(k).food || []).slice().reverse();
+      for (const x of food) {
+        const key = String(x.name || "").trim().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key); recentItems.push(x);
+        if (recentItems.length >= 12) break;
+      }
+      if (recentItems.length >= 12) break;
+    }
+    $("recentBlock").hidden = !recentItems.length;
+    $("recent").innerHTML = recentItems.map((x, i) => `<button class="chip" type="button" data-recent="${i}" aria-label="Add ${esc(x.name)}, ${fmt(x.kcal)} kcal">${esc(x.name)}<b>${fmt(x.kcal)}</b></button>`).join("");
+  }
+  $("recent").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-recent]"); if (!b) return;
+    const x = recentItems[Number(b.dataset.recent)]; if (!x) return;
+    addFood([x]); $("foodSheet").close();
+  });
+
+  // Manual food
+  $("manualForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("mName").value.trim(); if (!name) return;
+    addFood([{ name, kcal: $("mKcal").value, p: $("mProt").value, c: $("mCarb").value, f: $("mFat").value }]);
+    e.target.reset(); $("foodSheet").close();
+  });
+
+  // Training
+  $("trainForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("wName").value.trim(); if (!name) return;
+    const k = S.current, before = getDay(k), d = getDay(k);
+    d.workouts.push({ id: newId(), name, minutes: Math.round(num($("wMin").value)), kcal: Math.round(num($("wKcal").value)), notes: $("wNotes").value.trim(), at: Date.now() });
+    saveDay(k, d);
+    toast(`Added ${name}`, () => saveDay(k, before));
+    e.target.reset(); $("trainSheet").close();
+  });
+
+  // Target
+  $("setForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const target = Math.round(num($("target").value));
+    if (target < 800 || target > 6000) { $("target").focus(); return; }
+    const next = { target, addBack: $("addBack").checked, planTargets: S.plan.meta ? $("planTargets").checked : S.settings.planTargets !== false };
+    const changed = next.target !== S.settings.target || next.addBack !== S.settings.addBack || next.planTargets !== (S.settings.planTargets !== false);
+    S.settings = next; render(); $("setSheet").close();
+    if (changed && S.mode === "live") queue(() => S.meta.set(next), "Couldn't save your target. Check your connection and try again.");
+  });
+
+  // ---------- estimates from Claude ----------
+  let estCtl = null;
+  const PERMANENT = ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"];
+  function estCopy(code) {
+    if (PERMANENT.includes(code)) return "Estimates need your OK to use Claude. Reload to be asked again, or enter the food yourself below.";
+    if (code === "rate_limited") return "Too many estimates in a short time. Wait a minute and try again.";
+    if (code === "image_rejected") return "That photo couldn't be used. Try a JPEG or PNG under 20 MB.";
+    if (code === "images_unavailable") return "Photos can't be sent from here. Describe the meal instead.";
+    if (code === "session_expired") return "Your Claude sign-in has expired. Sign in again, then retry.";
+    if (["invalid_json", "empty_completion", "refused"].includes(code)) return "Couldn't estimate that. Try describing it a little differently.";
+    return "The estimate didn't finish. Check your connection and try again.";
+  }
+  function setEstBusy(busy) {
+    $("estimateBtn").disabled = busy; $("photoBtn").disabled = busy;
+    $("estimateBtn").textContent = busy ? "Estimating…" : "Estimate calories";
+  }
+  function renderEst() {
+    $("estList").innerHTML = S.est.map((x) => `
+      <li><div class="what"><span class="name">${esc(x.name)}</span><span class="sub">${esc([x.portion, `P ${x.p} · C ${x.c} · F ${x.f}`].filter(Boolean).join(" · "))}</span></div>
+      <label class="kcal-edit" for="est-${x.id}"><input id="est-${x.id}" type="number" inputmode="numeric" min="0" value="${x.kcal}" data-est-kcal="${x.id}" aria-label="Calories for ${esc(x.name)}">kcal</label>
+      <button class="del" type="button" data-est-del="${x.id}" aria-label="Remove ${esc(x.name)}">✕</button></li>`).join("");
+    updateEstButton();
+  }
+  function updateEstButton() {
+    const total = S.est.reduce((t, x) => t + num(x.kcal), 0);
+    $("addEstBtn").hidden = !S.est.length;
+    $("addEstBtn").textContent = S.est.length === 1 ? `Add · ${fmt(total)} kcal` : `Add ${S.est.length} items · ${fmt(total)} kcal`;
+  }
+  $("estList").addEventListener("input", (e) => {
+    const id = e.target.dataset.estKcal; if (!id) return;
+    const x = S.est.find((i) => i.id === id); if (x) { x.kcal = Math.max(0, Math.round(num(e.target.value))); updateEstButton(); }
+  });
+  $("estList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-est-del]"); if (!b) return;
+    S.est = S.est.filter((x) => x.id !== b.dataset.estDel); renderEst();
+  });
+  $("addEstBtn").addEventListener("click", () => {
+    if (!S.est.length) return;
+    addFood(S.est); S.est = []; renderEst(); $("describe").value = ""; $("estStatus").textContent = ""; $("foodSheet").close();
+  });
+
+  async function runEstimate(images) {
+    if (!S.sample) return;
+    const text = $("describe").value.trim().slice(0, 1500);
+    if (!text && !images) { $("describe").focus(); return; }
+    if (estCtl) estCtl.abort();
+    const ctl = estCtl = new AbortController();
+    setEstBusy(true);
+    $("estStatus").textContent = images ? "Looking at your photo…" : "Working out the calories…";
+    const intro = images
+      ? "The photo shows food or drink someone is having." + (text ? ` They add this note: """${text}"""` : "")
+      : `Someone had this food or drink: """${text}"""`;
+    const prompt = `${intro}
+List each separate food or drink with a realistic portion: use the amount they state, otherwise a typical single serving. Estimate the energy and macronutrients for that whole portion.
+Reply with only a JSON array, one object per item, numbers rounded to whole numbers, for example:
+[{"name":"Scrambled eggs","portion":"2 large eggs","kcal":180,"protein":13,"carbs":1,"fat":14}]`;
+    try {
+      const out = await S.sample.json(prompt, Object.assign({ modelTier: "quick", signal: ctl.signal }, images ? { images } : {}));
+      const items = (Array.isArray(out) ? out : []).filter((x) => x && typeof x.name === "string" && x.name.trim() && Number.isFinite(Number(x.kcal))).slice(0, 20)
+        .map((x) => ({ id: newId(), name: x.name.trim().slice(0, 80), portion: String(x.portion || "").slice(0, 60), kcal: Math.max(0, Math.round(num(x.kcal))), p: Math.max(0, Math.round(num(x.protein))), c: Math.max(0, Math.round(num(x.carbs))), f: Math.max(0, Math.round(num(x.fat))) }));
+      S.est = items; renderEst();
+      $("estStatus").textContent = items.length ? "These are estimates. Adjust any number, then add." : "Couldn't pick out any food. Try describing it differently.";
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "cancelled") { $("estStatus").textContent = ""; return; }
+      $("estStatus").textContent = estCopy(code);
+      if (PERMANENT.includes(code)) { S.sampleOff = true; $("manual").open = true; }
+      if (code === "images_unavailable") $("photoBtn").hidden = true;
+    } finally {
+      if (estCtl === ctl) { estCtl = null; setEstBusy(false); }
+      if (S.sampleOff) { $("estimateBtn").disabled = true; $("photoBtn").disabled = true; }
+    }
+  }
+  $("estimateBtn").addEventListener("click", () => runEstimate(null));
+  $("describe").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runEstimate(null); } });
+  $("photoBtn").addEventListener("click", () => $("photoInput").click());
+  $("photoInput").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (file) runEstimate(file);
+  });
+  $("foodSheet").addEventListener("close", () => { if (estCtl) estCtl.abort(); });
+
+  // ---------- Garmin, through the Garmin Sync connector ----------
+  const GARMIN = "Garmin Sync";
+  const G = { ready: false, busy: false, synced: new Set(), action: null, last: 0 };
+  function garminUI(msg, actionLabel, actionFn) {
+    $("garminRow").hidden = false;
+    $("garminStatus").textContent = msg || "";
+    G.action = actionFn || null;
+    $("garminAction").hidden = !actionLabel;
+    $("garminAction").textContent = actionLabel || "";
+  }
+  $("garminAction").addEventListener("click", () => { const f = G.action; if (f) f(); });
+  $("syncBtn").addEventListener("click", () => syncGarmin(rangeFor(S.current), false));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && G.ready && Date.now() - G.last > 10 * 60 * 1000) syncGarmin(rangeFor(S.current), false);
+  });
+
+  function rangeFor(k) {
+    const t = today(), weekStart = shift(t, -6);
+    return k >= weekStart ? [weekStart, t] : [k, k];
+  }
+
+  async function initGarmin() {
+    if (!S.mcp || S.mode !== "live") return;
+    let st = "prompt";
+    try { if (S.perms) st = await S.perms.state("mcp:" + GARMIN); } catch (_) { st = "prompt"; }
+    if (st === "unavailable") return;
+    if (st === "denied") { garminUI("Garmin sync is turned off for this page.", "Turn it on", openPermissions); return; }
+    if (st === "granted") { garminUI(""); syncGarmin(rangeFor(S.current), false); return; }
+    garminUI("Pull in your workouts and their calories from Garmin.");
+  }
+  function openPermissions() {
+    if (!S.perms) return;
+    S.perms.manage().then(initGarmin).catch(() => garminUI("Turn Garmin Sync back on from this page's Permissions menu."));
+  }
+
+  async function syncGarmin(range, isRetry) {
+    if (G.busy || !S.mcp || S.mode !== "live") return;
+    const [start, end] = range;
+    G.busy = true; $("syncBtn").disabled = true; $("syncBtn").textContent = "Syncing…";
+    try {
+      const res = await S.mcp.callTool(GARMIN, "get_activities", { start_date: start, end_date: end });
+      const acts = res && res.payload && Array.isArray(res.payload.activities) ? res.payload.activities : null;
+      if (!acts) throw { code: "bad_payload" };
+      const changed = applyGarmin(start, end, acts);
+      G.ready = true; G.last = Date.now();
+      for (let k = start; k <= end; k = shift(k, 1)) G.synced.add(k);
+      const when = new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      garminUI(`Synced with Garmin at ${when}${changed ? `, ${changed} day${changed === 1 ? "" : "s"} updated` : ""}.`);
+    } catch (e) {
+      garminError(e, range, isRetry);
+    } finally {
+      G.busy = false; $("syncBtn").disabled = false; $("syncBtn").textContent = "Sync Garmin";
+    }
+  }
+
+  function garminError(e, range, isRetry) {
+    const code = e && e.code, where = "claude.ai Settings, Connectors";
+    switch (code) {
+      case "server_not_connected": case "server_not_found":
+        return garminUI(`Garmin isn't connected yet. Add the Garmin Sync connector in ${where}, then tap Sync Garmin.`);
+      case "needs_reauth": return garminUI(`Reconnect Garmin Sync in ${where}, then tap Sync Garmin.`);
+      case "selection_required": return garminUI("You have more than one connector called Garmin Sync. Pick one when Claude asks, then tap Sync Garmin.");
+      case "not_in_manifest": return garminUI("Garmin sync is turned off for this page.", "Turn it on", openPermissions);
+      case "approval_required": return garminUI("Garmin sync needs your OK. Tap Sync Garmin and choose Allow.");
+      case "blocked_by_policy": return garminUI("Your organization doesn't allow this connector here.");
+      case "tool_error": {
+        const r = e.result, t = r && Array.isArray(r.content) && r.content[0] && r.content[0].text;
+        return garminUI(String(t || e.message || "Garmin Sync reported a problem.").slice(0, 240));
+      }
+      case "bad_payload": return garminUI("Garmin Sync answered in a way this page doesn't understand. Ask Claude to check the connector.");
+      case "not_granted": case "capability_disabled": case "capability_removed":
+        $("garminRow").hidden = true; return;
+      case "cancelled": return garminUI("");
+      default:
+        if (e && e.retryable && !isRetry) {
+          garminUI("Garmin didn't answer. Trying once more…");
+          setTimeout(() => syncGarmin(range, true), Math.max(Number(e.retryAfterMs) || 0, 1500 + Math.random() * 2000));
+          return;
+        }
+        return garminUI("Couldn't reach Garmin just now. Try Sync Garmin again in a minute.");
+    }
+  }
+
+  // Replace each day's Garmin workouts with what Garmin reports; manual entries and removed ones stay as they are.
+  function applyGarmin(start, end, acts) {
+    const byDay = new Map();
+    for (const a of acts) {
+      if (!a || !a.date) continue;
+      if (!byDay.has(a.date)) byDay.set(a.date, []);
+      byDay.get(a.date).push(a);
+    }
+    const sig = (list) => list.map((w) => [w.id, w.name, w.minutes, w.kcal, w.notes].join("|")).join("\n");
+    let changed = 0;
+    for (let k = start; k <= end; k = shift(k, 1)) {
+      const day = getDay(k);
+      const dismissed = new Set(Array.isArray(day.dismissed) ? day.dismissed : []);
+      const incoming = (byDay.get(k) || []).map((a) => ({
+        id: "g" + a.id,
+        name: String(a.name || "Workout").slice(0, 80),
+        minutes: Math.round(num(a.duration_min)),
+        kcal: Math.round(num(a.active_calories != null ? a.active_calories : a.calories)),
+        notes: [a.distance_km ? `${a.distance_km} km` : "", a.avg_hr ? `avg HR ${a.avg_hr}` : ""].filter(Boolean).join(" · "),
+        source: "garmin",
+      })).filter((w) => !dismissed.has(w.id));
+      const current = day.workouts.filter((w) => w.source === "garmin");
+      if (sig(current) === sig(incoming)) continue;
+      day.workouts = day.workouts.filter((w) => w.source !== "garmin").concat(incoming);
+      saveDay(k, day);
+      changed++;
+    }
+    return changed;
+  }
+
+  // ---------- start ----------
+  async function start() {
+    render();
+    const use = (n) => (window.claude && typeof window.claude.use === "function") ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+    const [db, sample, mcp, perms] = await Promise.all([use("db"), use("sample"), use("mcp"), use("permissions")]);
+    S.mcp = mcp; S.perms = perms;
+
+    S.sample = sample;
+    if (!sample) { $("estimateBlock").hidden = true; $("manual").open = true; }
+    else sample.limits().then((l) => { $("photoBtn").hidden = !(l && l.images); }).catch(() => {});
+
+    if (!db) { S.mode = "local"; render(); return; }
+    S.mode = "live"; S.db = db;
+    S.daysCol = db.collection("days");
+    S.meta = db.doc("meta/settings");
+    const timer = setTimeout(() => { if (!S.loaded) { S.slow = true; renderBanner(); } }, 10000);
+    S.meta.onSnapshot((s) => {
+      if (s.exists) { const d = s.data(); S.settings = { target: num(d.target) || 2200, addBack: d.addBack !== false, planTargets: d.planTargets !== false }; }
+      render();
+    }, (err) => { S.dbError = (err && err.code) || "unavailable"; renderBanner(); });
+    // The plan lives in the owner-only log, so it never shows to anyone the page is shared with.
+    db.doc("meta/plan").onSnapshot((s) => { S.plan.meta = s.exists ? s.data() : null; render(); }, () => {});
+    db.collection("plan").orderBy("date").limit(200).onSnapshot((snap) => {
+      S.plan.days = new Map(snap.docs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
+      if (!S.planSeen && S.plan.days.size) { S.planSeen = true; $("planDetails").open = S.current > today(); }
+      render();
+    }, () => {});
+    S.daysCol.orderBy("date", "desc").limit(WINDOW).onSnapshot((snap) => {
+      S.days = new Map(snap.docs.map((d) => [d.id, d.data()]));
+      if (!snap.metadata.fromCache) { S.loaded = true; S.slow = false; clearTimeout(timer); }
+      render();
+    }, (err) => { clearTimeout(timer); S.dbError = (err && err.code) || "unavailable"; renderBanner(); });
+    initGarmin();
+  }
+  start();
+})();
+</script>
